@@ -5,10 +5,16 @@
  */
 #include "arkimeconfig.h"
 
+/* helper to stringify macro value */
+#define STR(x) #x
+#define XSTR(x) STR(x)
+
 #ifndef HAVE_PYTHON
+#warning "COMPILE-TIME: HAVE_PYTHON is NOT defined"
 void arkime_python_init() {}
 void arkime_python_exit() {}
 #else
+#pragma message("COMPILE-TIME: HAVE_PYTHON = " XSTR(HAVE_PYTHON))
 #include "arkime.h"
 #include "Python.h"
 #include <arpa/inet.h>

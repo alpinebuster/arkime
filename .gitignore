@@ -83,6 +83,11 @@ GeoIPv6.dat
 ipv4-address-space.csv
 autom4te.cache
 stamp-h1
+*.tar
+*.tar.*
+release/afterinstall.sh
+configure~
+capture/arkimeconfig.h.in~
 
 # vite
 components.d.ts
