@@ -646,6 +646,12 @@ AS_IF([test "x$with_python" != "xno"], [
     have_python=no
 ])
 
+AS_IF([test "x$have_python" = "xyes"], [
+    AC_MSG_NOTICE([Python embedding is ENABLED])
+], [
+    AC_MSG_NOTICE([Python embedding is DISABLED])
+])
+
 AC_SUBST([PYTHON_CFLAGS])
 AC_SUBST([PYTHON_LIBS])
 

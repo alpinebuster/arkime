@@ -90,5 +90,12 @@ OUT
 asan*
 ja4plus.c
 
+*.tar
+*.tar.*
+release/afterinstall.sh
+configure~
+capture/arkimeconfig.h.in~
+thirdparty
+
 # vite
 components.d.ts
