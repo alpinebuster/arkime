@@ -88,6 +88,9 @@ stamp-h1
 release/afterinstall.sh
 configure~
 capture/arkimeconfig.h.in~
+tests/testconfig.ini
+tests/testconfig.json
+thirdparty
 
 # vite
 components.d.ts

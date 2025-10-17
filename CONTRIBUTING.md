@@ -22,7 +22,7 @@ First, checkout the main [Arkime README](README.md) for information on how to bu
 * Install [OpenSearch](https://opensearch.org/downloads.html) OR [Elasticsearch](https://www.elastic.co/downloads/past-releases#elasticsearch) (Use the latest version in "OpenSearch Versions" or "Elasticsearch versions" section of [CHANGELOG](CHANGELOG))
 * Start OpenSearch/Elasticsearch
 * If on a Mac install either [Homebrew](https://brew.sh) or [MacPorts](https://www.macports.org/)
-* Run `./easybutton-build.sh`
+* Run `./easybutton-build.sh --nothirdparty`
 * Run `make check` from the top level directory, this will
   * run `npm ci --registry=https://registry.npmmirror.com` everywhere (to install all the necessary dependencies)
   * run `tests.pl` and `tests.pl --viewer` in the tests directory (to load PCAPs)
@@ -63,13 +63,13 @@ Arkime supports internationalization to make the application accessible to users
 * **Translation Guidelines**: Follow our translation standards for consistency
 
 **Currently supported languages:**
-* 🇺🇸 English (en) - Default
+* 🇺🇸 English (en)
 * 🇪🇸 Spanish (es)
 * 🇫🇷 French (fr)
 * 🇩🇪 German (de)
 * 🇯🇵 Japanese (ja)
 * 🇰🇷 Korean (ko)
-* 🇨🇳 Chinese (zh)
+* 🇨🇳 Chinese (zh) - Default
 
 **Getting started with translations:**
 1. Read the comprehensive [Internationalization Guide](INTERNATIONALIZATION.md)
