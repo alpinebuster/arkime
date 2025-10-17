@@ -114,7 +114,7 @@ const changeLanguage = (langCode) => {
 // Detect browser's default language
 const detectBrowserLanguage = () => {
   // Get browser language (e.g., 'en-US', 'es-ES', 'fr-FR')
-  const browserLang = navigator.language || navigator.languages?.[0] || 'en';
+  const browserLang = navigator.language || navigator.languages?.[0] || 'zh';
 
   // Extract the base language code (e.g., 'en' from 'en-US')
   const baseLanguageCode = browserLang.split('-')[0].toLowerCase();

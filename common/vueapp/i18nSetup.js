@@ -54,7 +54,7 @@ async function loadLocales(apiUrl) {
 export async function createI18nInstance(apiUrl) {
   // Create a placeholder i18n instance that will be configured after locale loading
   const i18n = createI18n({
-    locale: 'en', // default locale
+    locale: 'zh', // default locale
     fallbackLocale: 'en', // fallback locale when translation is missing
     legacy: false, // use Composition API (Vue 3) - required to avoid deprecation warning
     globalInjection: true, // enable global $t function
@@ -77,8 +77,8 @@ export async function createI18nInstance(apiUrl) {
 
     // Set default locale if English is available, otherwise use the first available locale
     const availableLocales = Object.keys(messages);
-    if (availableLocales.includes('en')) {
-      i18n.global.locale.value = 'en';
+    if (availableLocales.includes('zh')) {
+      i18n.global.locale.value = 'zh';
     } else if (availableLocales.length > 0) {
       i18n.global.locale.value = availableLocales[0];
     }
