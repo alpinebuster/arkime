@@ -11,18 +11,12 @@ SPDX-License-Identifier: Apache-2.0
 
       <div class="well well-lg">
         <h1>404</h1>
-        <h4>Nothing to see here...</h4>
+        <h4>{{ $t('common.nothingToSeeHere') }}</h4>
       </div>
 
       <br>
 
-      <div class="margined-bottom">
-        Maybe you want to view your
-        <a
-          href=""
-          class="no-decoration">
-          Parliament</a>?
-      </div>
+      <div class="margined-bottom" v-html="$t('parliament.404.messageHtml')" />
     </div>
   </div>
 </template>

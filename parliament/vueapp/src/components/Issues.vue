@@ -111,7 +111,7 @@ SPDX-License-Identifier: Apache-2.0
         <b-dropdown-item
           :active="!filterEsRed"
           @click.capture.stop.prevent="toggleFilter('filterEsRed')">
-          {{ $t('parliament.issue.esResIssues') }}
+          {{ $t('parliament.issue.esRedIssues') }}
         </b-dropdown-item>
         <b-dropdown-item
           :active="!filterEsDown"
@@ -126,7 +126,7 @@ SPDX-License-Identifier: Apache-2.0
         <b-dropdown-item
           :active="!filterOutOfDate"
           @click.capture.stop.prevent="toggleFilter('filterOutOfDate')">
-          {{ $t('parliament.issue.ofOfDateIssues') }}
+          {{ $t('parliament.issue.outOfDateIssues') }}
         </b-dropdown-item>
         <b-dropdown-item
           :active="!filterNoPackets"
@@ -136,12 +136,12 @@ SPDX-License-Identifier: Apache-2.0
         <b-dropdown-item
           :active="!filterLowDiskSpace"
           @click.capture.stop.prevent="toggleFilter('filterLowDiskSpace')">
-          Low Capture Disk Space Issues
+          {{ $t('parliament.issue.filterLowDiskSpace') }}
         </b-dropdown-item>
         <b-dropdown-item
           :active="!filterLowDiskSpaceES"
           @click.capture.stop.prevent="toggleFilter('filterLowDiskSpaceES')">
-          Low ES Disk Space Issues
+          {{ $t('parliament.issue.filterLowDiskSpaceES') }}
         </b-dropdown-item>
       </b-dropdown>
       <div class="flex-grow-1 ms-1">
@@ -258,7 +258,7 @@ SPDX-License-Identifier: Apache-2.0
               class="fa fa-sort-desc fa-fw" />
           </th>
           <th scope="col">
-            Value
+            {{ $t('parliament.issue.table-value') }}
           </th>
           <th
             scope="col"
