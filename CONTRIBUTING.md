@@ -22,7 +22,7 @@ First, checkout the main [Arkime README](README.md) for information on how to bu
 * Install [OpenSearch](https://opensearch.org/downloads.html) OR [Elasticsearch](https://www.elastic.co/downloads/past-releases#elasticsearch) (Use the latest version in "OpenSearch Versions" or "Elasticsearch versions" section of [CHANGELOG](CHANGELOG))
 * Start OpenSearch/Elasticsearch
 * If on a Mac install either [Homebrew](https://brew.sh) or [MacPorts](https://www.macports.org/)
-* Run `./easybutton-build.sh --nothirdparty`
+* Run `ARKIME_BUILD_FULL_VERSION=vVERSION_STRING ./easybutton-build.sh --nothirdparty`
 * Run `make check` from the top level directory, this will
   * run `npm ci --registry=https://registry.npmmirror.com` everywhere (to install all the necessary dependencies)
   * run `tests.pl` and `tests.pl --viewer` in the tests directory (to load PCAPs)

@@ -3,7 +3,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/arkime/arkime.git"
+    "url": "https://github.com/alpinebuster/arkime.git"
   },
   "scripts": {
     "bundle": "(cd vueapp && vite build --minify false)",

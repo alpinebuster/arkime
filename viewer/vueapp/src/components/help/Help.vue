@@ -13,6 +13,7 @@ SPDX-License-Identifier: Apache-2.0
         About
       </a>
       <a
+        v-if="demo"
         href="help#links"
         class="nav-link">
         <span class="fa fa-fw fa-link" />&nbsp;
@@ -161,11 +162,15 @@ SPDX-License-Identifier: Apache-2.0
 
       <hr>
 
-      <h3 id="links">
+      <h3
+        v-if="demo"
+        id="links">
         <span class="fa fa-fw fa-link" />&nbsp;
         Links
       </h3>
-      <div class="row">
+      <div
+        v-if="demo"
+        class="row">
         <div class="col-sm-12">
           <a
             class="btn btn-link"
@@ -178,14 +183,15 @@ SPDX-License-Identifier: Apache-2.0
             href="https://arkime.com/learn">Docs</a> |
           <a
             class="btn btn-link"
-            href="https://github.com/arkime/arkime">GitHub</a> |
+            href="https://github.com/alpinebuster/arkime">GitHub</a> |
           <a
             class="btn btn-link"
             href="https://slackinvite.arkime.com/">Request Slack Invite</a>
         </div>
       </div>
 
-      <hr>
+      <hr
+        v-if="demo">
 
       <h3 id="search">
         <span class="fa fa-search" />&nbsp;
@@ -1504,6 +1510,7 @@ export default {
   name: 'Help',
   data: function () {
     return {
+      demo: this.$constants.DEMO_MODE,
       error: '',
       searchFields: '',
       showDBFields: true,
