@@ -50,7 +50,9 @@ SPDX-License-Identifier: Apache-2.0
       <b-navbar-nav
         class="ms-auto">
         <small>
-          <Version :timezone="timezone" />
+          <Version
+            v-if="demo"
+            :timezone="timezone" />
         </small>
         <LanguageSwitcher additional-classes="ms-2" />
         <router-link
@@ -99,6 +101,7 @@ export default {
   },
   data: function () {
     return {
+      demo: this.$constants.DEMO_MODE,
       path: this.$constants.PATH,
       menuOrder: [
         'sessions', 'spiview', 'spigraph', 'connections', 'hunt',

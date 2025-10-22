@@ -462,7 +462,7 @@ export default {
     return {
       visibleTab: 'general',
       itypeTip: 'Indicator type (<code>domain</code>, <code>ip</code>, <code>url</code>, <code>email</code>, <code>phone</code>, <code>hash</code>, or <code>text</code>)',
-      postProcessorTip: 'See <code>cont3xt/descriptions.txt</code> on the <a class="no-decoration" href="https://github.com/arkime/arkime">Arkime GitHub</a> for more info',
+      postProcessorTip: 'See <code>cont3xt/descriptions.txt</code> on the <a class="no-decoration" href="https://github.com/alpinebuster/arkime">GitHub</a> for more info',
       overviewShorthandExample: '"phone_number"',
       overviewShorthandExampleExpanded: { label: 'phone_number', field: 'phone_number' },
       overviewCustomConfigExamples: [

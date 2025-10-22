@@ -40,9 +40,9 @@ export default {
     versionLink () {
       if (!this.version) return '';
       if (this.version.includes('-GIT')) {
-        return `https://github.com/arkime/arkime/commit/${this.buildVersion}`;
+        return `https://github.com/alpinebuster/arkime/commit/${this.buildVersion}`;
       } else {
-        return `https://github.com/arkime/arkime/releases/tag/v${this.version}`;
+        return `https://github.com/alpinebuster/arkime/releases/tag/v${this.version}`;
       }
     }
   }
