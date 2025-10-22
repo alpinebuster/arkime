@@ -55,7 +55,7 @@ export default {
     return {
       bouncing: false,
       watching: 'assets/watching.gif',
-      logo: 'assets/Arkime_Logo_Mark_FullGradient.png'
+      logo: 'assets/DTA_Logo_Mark_Blue.png'
     };
   },
   computed: {
