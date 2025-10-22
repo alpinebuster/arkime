@@ -114,7 +114,7 @@ export default {
       if (this.user && this.user.settings.logo && this.user.settings.logo) {
         return this.user.settings.logo;
       }
-      return 'assets/Arkime_Logo_Mark_White.png';
+      return 'assets/DTA_Logo_Mark_White.png';
     },
     menu: function () {
       const menu = {

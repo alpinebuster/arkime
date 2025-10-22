@@ -1499,6 +1499,8 @@ export default {
         { name: 'Dark Blue', class: 'dark-3-theme' }
       ],
       logos: [
+        { name: 'DTA Light', location: 'assets/DTA_Logo_Mark_White.png' },
+        { name: 'DTA Dark', location: 'assets/DTA_Logo_Mark_Blue.png' },
         { name: 'Arkime Light', location: 'assets/Arkime_Logo_Mark_White.png' },
         { name: 'Arkime Dark', location: 'assets/Arkime_Logo_Mark_Black.png' },
         { name: 'Arkime Color', location: 'assets/Arkime_Logo_Mark_Full.png' },
@@ -1797,7 +1799,7 @@ export default {
         this.creatingCustom = true;
       }
       if (!this.settings.logo) {
-        this.settings.logo = 'assets/Arkime_Logo_Mark_White.png';
+        this.settings.logo = 'assets/DTA_Logo_Mark_White.png';
       }
     },
     /* changes the ui theme (picked from existing themes) */
