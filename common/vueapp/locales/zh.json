@@ -124,7 +124,7 @@
     "spiViewFieldConfigTip": "保存或加载自定义可见字段配置",
     "spiViewFieldConfigSaveTip": "保存此自定义 SPI 视图字段配置",
     "spiViewConfigDefaultTip": "将可见字段重置为默认字段：目标 IP、源 IP 和协议",
-    "arkimeDefault": "Arkime 默认",
+    "arkimeDefault": "默认",
     "cancelWarningHtml": "<strong>警告：</strong>由于请求已取消，下面显示的许多数据与您的查询不匹配。<em>点击搜索重新提交您的查询。</em>",
     "loadAll": "加载全部",
     "loadAllTip": "加载此类别中的所有值",
@@ -419,7 +419,7 @@
       "showMoreFields": "显示更多 {count} 个字段...",
       "customColumnMsg": "保存或加载自定义列配置",
       "customColumnName": "输入新的列配置名称",
-      "arkimeDefault": "Arkime 默认",
+      "arkimeDefault": "默认",
       "customColumnReset": "将表格重置为默认值",
       "customColumnUpdate": "使用当前可见列更新此列配置",
       "customInfoMsg": "保存或加载自定义信息字段配置",
@@ -931,7 +931,7 @@
   "settings": {
     "settings": "设置",
     "settingsFor": "{user} 的设置",
-    "arkimeDefault": "Arkime 默认",
+    "arkimeDefault": "默认",
     "nav": {
       "general": "常规",
       "columnLayout": "列布局",

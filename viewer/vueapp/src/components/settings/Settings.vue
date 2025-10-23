@@ -1489,8 +1489,8 @@ export default {
       // theme settings vars
       watching: 'assets/watching.gif',
       themeDisplays: [
-        { name: 'Arkime Light', class: 'arkime-light-theme' },
-        { name: 'Arkime Dark', class: 'arkime-dark-theme' },
+        { name: 'Default Light', class: 'arkime-light-theme' },
+        { name: 'Default Dark', class: 'arkime-dark-theme' },
         { name: 'Purp-purp', class: 'purp-theme' },
         { name: 'Blue', class: 'blue-theme' },
         { name: 'Green', class: 'green-theme' },
@@ -1501,14 +1501,14 @@ export default {
       logos: [
         { name: 'DTA Light', location: 'assets/DTA_Logo_Mark_White.png' },
         { name: 'DTA Dark', location: 'assets/DTA_Logo_Mark_Blue.png' },
-        { name: 'Arkime Light', location: 'assets/Arkime_Logo_Mark_White.png' },
-        { name: 'Arkime Dark', location: 'assets/Arkime_Logo_Mark_Black.png' },
-        { name: 'Arkime Color', location: 'assets/Arkime_Logo_Mark_Full.png' },
-        { name: 'Arkime Gradient', location: 'assets/Arkime_Logo_Mark_FullGradient.png' },
-        { name: 'Arkime Circle Light', location: 'assets/Arkime_Icon_White.png' },
-        { name: 'Arkime Circle Dark', location: 'assets/Arkime_Icon_Black.png' },
-        { name: 'Arkime Circle Mint', location: 'assets/Arkime_Icon_ColorMint.png' },
-        { name: 'Arkime Circle Blue', location: 'assets/Arkime_Icon_ColorBlue.png' }
+        { name: 'Default Light', location: 'assets/Arkime_Logo_Mark_White.png' },
+        { name: 'Default Dark', location: 'assets/Arkime_Logo_Mark_Black.png' },
+        { name: 'Default Color', location: 'assets/Arkime_Logo_Mark_Full.png' },
+        { name: 'Default Gradient', location: 'assets/Arkime_Logo_Mark_FullGradient.png' },
+        { name: 'Default Circle Light', location: 'assets/Arkime_Icon_White.png' },
+        { name: 'Default Circle Dark', location: 'assets/Arkime_Icon_Black.png' },
+        { name: 'Default Circle Mint', location: 'assets/Arkime_Icon_ColorMint.png' },
+        { name: 'Default Circle Blue', location: 'assets/Arkime_Icon_ColorBlue.png' }
       ],
       creatingCustom: false,
       displayHelp: true,
