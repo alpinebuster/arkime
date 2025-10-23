@@ -271,7 +271,7 @@ class Auth {
         const path = require('path');
 
         Auth.#authRouter.get('/logo.png', (req, res) => {
-          res.sendFile(path.join(__dirname, '../assets/Arkime_Logo_Mark_FullGradient.png'));
+          res.sendFile(path.join(__dirname, '../assets/DTA_Logo_Mark_Blue.png'));
         });
 
         Auth.#authRouter.get('/auth', (req, res) => {
