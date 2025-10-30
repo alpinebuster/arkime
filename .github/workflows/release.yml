@@ -164,7 +164,7 @@ jobs:
             *.zst
             NOTICE.txt
           body: |
-            ### [Installation Instructions](https://arkime.com/install) | [4.x -> 5.x Upgrade Instructions](https://arkime.com/faq#how_do_i_upgrade_to_arkime_5) | [FAQ](https://arkime.com/faq) | [CHANGELOG](https://raw.githubusercontent.com/arkime/arkime/main/CHANGELOG) | [JA4+ Install](https://arkime.com/ja4) | [Docker Install](https://arkime.com/docker)
+            ### [Installation Instructions](https://arkime.com/install) | [4.x -> 5.x Upgrade Instructions](https://arkime.com/faq#how_do_i_upgrade_to_arkime_5) | [FAQ](https://arkime.com/faq) | [CHANGELOG](https://raw.githubusercontent.com/alpinebuster/arkime/main/CHANGELOG) | [JA4+ Install](https://arkime.com/ja4) | [Docker Install](https://arkime.com/docker)
 
             A db.pl upgrade is required when upgrading from 5.1.2 or earlier
 
@@ -198,7 +198,7 @@ jobs:
           push: true
           provenance: false
           tags: |
-            ghcr.io/${{ github.repository_owner }}/arkime/arkime:v${{ github.event.inputs.release_tag }}-${{ env.ARKIME_ARCH }}
+            ghcr.io/${{ github.repository_owner }}/alpinebuster/arkime:v${{ github.event.inputs.release_tag }}-${{ env.ARKIME_ARCH }}
           build-args: |
             ARKIME_TAG=v${{ github.event.inputs.release_tag }}
             ARKIME_BUILD=${{ github.event.inputs.release_tag }}-${{ github.event.inputs.iteration }}
@@ -212,9 +212,9 @@ jobs:
           push: true
           provenance: false
           tags: |
-            ghcr.io/${{ github.repository_owner }}/arkime/arkime:v${{ github.event.inputs.release_tag }}-${{ env.ARKIME_ARCH }}-ja4
+            ghcr.io/${{ github.repository_owner }}/alpinebuster/arkime:v${{ github.event.inputs.release_tag }}-${{ env.ARKIME_ARCH }}-ja4
           build-args: |
-            ARKIME_BASE=ghcr.io/${{ github.repository_owner }}/arkime/arkime:v${{ github.event.inputs.release_tag }}-${{ env.ARKIME_ARCH }}
+            ARKIME_BASE=ghcr.io/${{ github.repository_owner }}/alpinebuster/arkime:v${{ github.event.inputs.release_tag }}-${{ env.ARKIME_ARCH }}
 
 ############# Docker Manifest #############
   create-manifest:
@@ -233,7 +233,7 @@ jobs:
 
       - name: Create and push manifest
         run: |
-          package="ghcr.io/${{ github.repository_owner }}/arkime/arkime"
+          package="ghcr.io/${{ github.repository_owner }}/alpinebuster/arkime"
           export ARKIME_MAJOR_VERSION=`echo ${{github.event.inputs.release_tag}} | cut -c 1-1`
 
           create_and_push() {

@@ -332,8 +332,8 @@ jobs:
           push: ${{ github.event_name == 'push' }}
           provenance: false
           tags: |
-            ghcr.io/${{ github.repository_owner }}/arkime/arkime:snapshot-v${{ env.ARKIME_MAJOR_VERSION }}-${{ env.ARKIME_ARCH }}-${{ github.run_id }}
-            ghcr.io/${{ github.repository_owner }}/arkime/arkime:snapshot-v${{ env.ARKIME_MAJOR_VERSION }}-${{ env.ARKIME_ARCH }}-latest
+            ghcr.io/${{ github.repository_owner }}/alpinebuster/arkime:snapshot-v${{ env.ARKIME_MAJOR_VERSION }}-${{ env.ARKIME_ARCH }}-${{ github.run_id }}
+            ghcr.io/${{ github.repository_owner }}/alpinebuster/arkime:snapshot-v${{ env.ARKIME_MAJOR_VERSION }}-${{ env.ARKIME_ARCH }}-latest
           build-args: |
             ARKIME_TAG=${{ env.ARKIME_DOCKER_TAG }}
             ARKIME_BUILD=main
@@ -347,10 +347,10 @@ jobs:
           push: true
           provenance: false
           tags: |
-            ghcr.io/${{ github.repository_owner }}/arkime/arkime:snapshot-v${{ env.ARKIME_MAJOR_VERSION }}-${{ env.ARKIME_ARCH }}-ja4-${{ github.run_id }}
-            ghcr.io/${{ github.repository_owner }}/arkime/arkime:snapshot-v${{ env.ARKIME_MAJOR_VERSION }}-${{ env.ARKIME_ARCH }}-ja4-latest
+            ghcr.io/${{ github.repository_owner }}/alpinebuster/arkime:snapshot-v${{ env.ARKIME_MAJOR_VERSION }}-${{ env.ARKIME_ARCH }}-ja4-${{ github.run_id }}
+            ghcr.io/${{ github.repository_owner }}/alpinebuster/arkime:snapshot-v${{ env.ARKIME_MAJOR_VERSION }}-${{ env.ARKIME_ARCH }}-ja4-latest
           build-args: |
-            ARKIME_BASE=ghcr.io/${{ github.repository_owner }}/arkime/arkime:snapshot-v${{ env.ARKIME_MAJOR_VERSION }}-${{ env.ARKIME_ARCH }}-${{ github.run_id }}
+            ARKIME_BASE=ghcr.io/${{ github.repository_owner }}/alpinebuster/arkime:snapshot-v${{ env.ARKIME_MAJOR_VERSION }}-${{ env.ARKIME_ARCH }}-${{ github.run_id }}
 
 ############# Docker Manifest #############
   create-manifest:
@@ -377,7 +377,7 @@ jobs:
         run: |
           export ARKIME_MAJOR_VERSION=`grep AC_INIT configure.ac | sed "s/.*\[\(.*\)\].*$/\1/" | cut -c 1-1`
 
-          package="ghcr.io/${{ github.repository_owner }}/arkime/arkime"
+          package="ghcr.io/${{ github.repository_owner }}/alpinebuster/arkime"
 
           create_and_push() {
             local tag=$1
