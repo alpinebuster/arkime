@@ -69,6 +69,7 @@ NOTICE: Create a parliament config file before upgrading (see https://arkime.com
   - #3197 new sessionsStarted and sessionsPresent in files tab
   - #3210 new vlan.dot1q and vlan.dot1ad expressions
   - #3308 City and Region from MMDB
+  - #3434 SCTP protoId
 ## Viewer
   - #3326 BIG search expression
   - #3343 Basic internationalization support
@@ -97,6 +98,8 @@ NOTICE: Create a parliament config file before upgrading (see https://arkime.com
   - #3407 Greynoise malicious tidbit
 ## Multies
   - #3430 Handle when ES cluster returns 503 better
+## WISE
+  - #3435 New wise urlapi source
 
 5.8.2 2025/11/xx
 ## Release

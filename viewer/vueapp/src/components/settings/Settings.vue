@@ -1605,6 +1605,10 @@ export default {
   methods: {
     timezoneDateString,
     copyValue (val) {
+      if (!navigator.clipboard) {
+        alert(this.$t('common.clipboardNotSupported', { value: val }));
+        return;
+      }
       navigator.clipboard.writeText(val);
     },
     /* exposed page functions ---------------------------------------------- */
