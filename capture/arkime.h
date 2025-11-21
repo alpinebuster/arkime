@@ -48,7 +48,7 @@
 #define SUPPRESS_INT_CONVERSION
 #endif
 
-#define ARKIME_API_VERSION 601
+#define ARKIME_API_VERSION 602
 
 #define ARKIME_SESSIONID_LEN  40
 #define ARKIME_SESSIONID6_LEN 40
@@ -296,8 +296,12 @@ typedef struct {
 #define ARKIME_THREAD_INCROLD(var)       __sync_fetch_and_add(&var, 1);
 #define ARKIME_THREAD_INCR_NUM(var, num) __sync_add_and_fetch(&var, num);
 
+#define ARKIME_THREAD_DECR(var)          __sync_sub_and_fetch(&var, 1);
 #define ARKIME_THREAD_DECRNEW(var)       __sync_sub_and_fetch(&var, 1);
 #define ARKIME_THREAD_DECROLD(var)       __sync_fetch_and_sub(&var, 1);
+#define ARKIME_THREAD_DECR_NUM(var, num) __sync_sub_and_fetch(&var, num);
+
+#define ARKIME_THREAD_CAS(ptr, old, new) __sync_bool_compare_and_swap((ptr), (old), (new))
 
 /* You are probably looking here because you think 24 is too low, really it isn't.
  * Instead, increase the number of threads used for reading packets.
@@ -415,6 +419,7 @@ typedef struct arkime_config {
     char     *nodeClass;
     char     *elasticsearch;
     char    **interface;
+    int       interfaceCnt;
     int       pcapDirPos;
     char    **pcapDir;
     char     *pcapDirTemplate;
@@ -437,7 +442,6 @@ typedef struct arkime_config {
     double    maxFileSizeG;
     uint64_t  maxFileSizeB;
     uint32_t  maxFileTimeM;
-    uint32_t  timeouts[SESSION_MAX];
     uint32_t  tcpSaveTimeout;
     uint32_t  maxStreams[SESSION_MAX];
     uint32_t  maxPackets;
@@ -789,6 +793,7 @@ typedef struct {
     char                  *token;
 } ArkimeCredentials_t;
 
+#define ARRAY_LEN(arr) ((int)(sizeof(arr) / sizeof((arr)[0])))
 
 #define ARKIME_TYPE_ALLOC(type) (type *)(malloc(sizeof(type)))
 #define ARKIME_TYPE_ALLOC0(type) (type *)(calloc(1, sizeof(type)))
@@ -797,6 +802,15 @@ typedef struct {
 #define ARKIME_SIZE_ALLOC(name, s)  malloc(s)
 #define ARKIME_SIZE_ALLOC0(name, s) calloc(s, 1)
 #define ARKIME_SIZE_FREE(name, mem) free(mem)
+#define ARKIME_SIZE_REALLOC(name, ptr, size) \
+    do { \
+        const void *_tmp_ptr = realloc((ptr), (size)); \
+        if (!_tmp_ptr && (size) > 0) { \
+            LOGEXIT("ERROR - Failed to reallocate %s %zu bytes at %s:%d", \
+                    name, (size_t)(size), __FILE__, __LINE__); \
+        } \
+        (ptr) = (void *)_tmp_ptr; \
+    } while(0)
 
 // pcap_file_header
 typedef struct {
@@ -932,6 +946,8 @@ uint32_t arkime_add_named_func(const char *name, ArkimeNamedFunc func, void *cbu
 void arkime_call_named_func(uint32_t id, int thread, void *uw);
 
 gboolean arkime_is_main_thread();
+
+char *arkime_ip4tostr(uint32_t ip, char *str, int len);
 
 /******************************************************************************/
 /*
@@ -1216,13 +1232,13 @@ void     arkime_session_add_tag(ArkimeSession_t *session, const char *tag);
 #define  arkime_session_incr_outstanding(session) (session)->outstandingQueries++
 gboolean arkime_session_decr_outstanding(ArkimeSession_t *session);
 
-void     arkime_session_mark_for_close(ArkimeSession_t *session, SessionTypes ses);
+void     arkime_session_mark_for_close(ArkimeSession_t *session);
 void     arkime_session_flip_src_dst(ArkimeSession_t *session);
 
 void     arkime_session_mid_save(ArkimeSession_t *session, uint32_t tv_sec);
 
 int      arkime_session_watch_count(SessionTypes ses);
-int      arkime_session_idle_seconds(SessionTypes ses);
+int      arkime_session_idle_seconds(int mProtocol);
 int      arkime_session_close_outstanding();
 
 void     arkime_session_flush();
@@ -1305,6 +1321,8 @@ void     arkime_packet_set_ip_cb2(uint16_t type, ArkimePacketEnqueue_cb2 enqueue
 void     arkime_packet_set_udpport_enqueue_cb(uint16_t port, ArkimePacketEnqueue_cb enqueueCb);
 void     arkime_packet_set_udpport_enqueue_cb2(uint16_t port, ArkimePacketEnqueue_cb2 enqueueCb, void *cbuw);
 
+ArkimePacket_t *arkime_packet_alloc();
+void arkime_packet_free(ArkimePacket_t *packet);
 
 /******************************************************************************/
 typedef void (*ArkimeProtocolCreateSessionId_cb)(uint8_t *sessionId, ArkimePacket_t *const packet);
@@ -1315,13 +1333,17 @@ typedef void (*ArkimeProtocolSessionMidSave_cb)(ArkimeSession_t *session);
 
 typedef struct {
     const char                       *name;
-    int                               ses;
+    SessionTypes                      ses;
     ArkimeProtocolCreateSessionId_cb  createSessionId;
     ArkimeProtocolPreProcess_cb       preProcess;
     ArkimeProtocolProcess_cb          process;
     ArkimeProtocolSessionFree_cb      sFree;
     ArkimeProtocolSessionMidSave_cb   midSave;
+    int                               sessionTimeout;
 } ArkimeProtocol_t;
+
+#define ARKIME_MPROTOCOL_MIN 1
+#define ARKIME_MPROTOCOL_MAX 256
 
 int arkime_mprotocol_register_internal(const char                      *name,
                                        int                              ses,
@@ -1329,12 +1351,14 @@ int arkime_mprotocol_register_internal(const char                      *name,
                                        ArkimeProtocolPreProcess_cb      preProcess,
                                        ArkimeProtocolProcess_cb         process,
                                        ArkimeProtocolSessionFree_cb     sFree,
+                                       ArkimeProtocolSessionMidSave_cb  midSave,
+                                       int                              sessionTimeout,
                                        size_t                           sessionsize,
                                        int                              apiversion);
 
-void arkime_mprotocol_set_mid_save(int mprotocol, ArkimeProtocolSessionMidSave_cb midSave);
+#define arkime_mprotocol_register(name, ses, createSessionId, preProcess, process, sFree, midSave, sessionTimeout) arkime_mprotocol_register_internal(name, ses, createSessionId, preProcess, process, sFree, midSave, sessionTimeout, sizeof(ArkimeSession_t), ARKIME_API_VERSION)
 
-#define arkime_mprotocol_register(name, ses, createSessionId, preProcess, process, sFree) arkime_mprotocol_register_internal(name, ses, createSessionId, preProcess, process, sFree, sizeof(ArkimeSession_t), ARKIME_API_VERSION)
+int arkime_mprotocol_get(const char *name);
 
 void arkime_mprotocol_init();
 

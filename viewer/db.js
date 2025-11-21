@@ -151,7 +151,7 @@ Db.initialize = async (info, cb) => {
 
   // Replace tag implementation
   if (internals.multiES) {
-    Db.isLocalView = (node, yesCB, noCB) => { return noCB(); };
+    Db.isLocalView = (node) => { return false; };
     internals.prefix = 'MULTIPREFIX_';
   }
 
@@ -279,11 +279,11 @@ Db.merge = (to, from) => {
   }
 };
 
-Db.get = async (index, type, id) => {
+Db.get = async (index, id) => {
   return internals.client7.get({ index: fixIndex(index), id });
 };
 
-Db.getWithOptions = async (index, type, id, options) => {
+Db.getWithOptions = async (index, id, options) => {
   const params = { index: fixIndex(index), id };
   Db.merge(params, options);
   return internals.client7.get(params);
@@ -459,7 +459,7 @@ Db.getSession = async (id, options, cb) => {
         return cb(null, session);
       } else if (fileInfo.packetPosEncoding === 'localIndex') {
         // Neg numbers aren't encoded, use var length encoding, if pos is 0 same gap as last gap, otherwise last + pos
-        Db.isLocalView(fields.node, () => {
+        if (await Db.isLocalView(fields.node)) {
           const newPacketPos = [];
           async.forEachOfSeries(fields.packetPos, async (item, key) => {
             if (key % 3 !== 0) { return; } // Only look at every 3rd item
@@ -501,9 +501,9 @@ Db.getSession = async (id, options, cb) => {
             fields.packetPos = newPacketPos;
             return cb(null, session);
           });
-        }, () => {
+        } else {
           return cb(null, session);
-        });
+        }
       } else {
         console.log('Unknown packetPosEncoding', fileInfo);
         return cb(null, session);
@@ -529,7 +529,7 @@ Db.getSession = async (id, options, cb) => {
 
   const index = Db.sid2Index(id, { multiple: true });
 
-  Db.search(index, '_doc', query, params, async (err, results) => {
+  Db.search(index, query, params, async (err, results) => {
     if (internals.debug > 2) {
       console.log('GETSESSION - search results', err, JSON.stringify(results, false, 2));
     }
@@ -562,17 +562,17 @@ Db.getSession = async (id, options, cb) => {
   });
 };
 
-Db.index = async (index, type, id, doc) => {
+Db.index = async (index, id, doc) => {
   return internals.client7.index({ index: fixIndex(index), body: doc, id });
 };
 
-Db.indexNow = async (index, type, id, doc) => {
+Db.indexNow = async (index, id, doc) => {
   return internals.client7.index({
     index: fixIndex(index), body: doc, id, refresh: true
   });
 };
 
-Db.search = async (index, type, query, options, cb) => {
+Db.search = async (index, query, options, cb) => {
   if (!cb && typeof options === 'function') {
     cb = options;
     options = undefined;
@@ -637,16 +637,16 @@ Db.cancelByOpaqueId = async (cancelId, cluster) => {
   return 'OpenSearch/Elasticsearch task cancelled succesfully';
 };
 
-Db.searchScroll = function (index, type, query, options, cb) {
+Db.searchScroll = function (index, query, options, cb) {
   // external scrolling, or multiesES or lesseq 10000, do a normal search which does its own Promise conversion
   if (query.scroll !== undefined || internals.multiES || (query.size ?? 0) + (parseInt(query.from ?? 0, 10)) <= 10000) {
-    return Db.search(index, type, query, options, cb);
+    return Db.search(index, query, options, cb);
   }
 
   // Convert promise to cb by calling ourselves
   if (!cb) {
     return new Promise((resolve, reject) => {
-      Db.searchScroll(index, type, query, options, (err, data) => {
+      Db.searchScroll(index, query, options, (err, data) => {
         if (err) {
           reject(err);
         } else {
@@ -668,7 +668,7 @@ Db.searchScroll = function (index, type, query, options, cb) {
   Db.merge(params, options);
   query.size = 1000; // Get 1000 items per scroll call
   query.profile = internals.esProfile;
-  Db.search(index, type, query, params,
+  Db.search(index, query, params,
     async function getMoreUntilDone (error, response) {
       if (error) {
         if (totalResults && from > 0) {
@@ -723,7 +723,7 @@ Db.searchSessions = function (index, query, options, cb) {
   if (internals.maxConcurrentShardRequests) { params.maxConcurrentShardRequests = internals.maxConcurrentShardRequests; }
   Db.merge(params, options);
   delete params.arkime_unflatten;
-  Db.searchScroll(index, 'session', query, params, (err, result) => {
+  Db.searchScroll(index, query, params, (err, result) => {
     if (err || result.hits.hits.length === 0) { return cb(err, result); }
 
     for (let i = 0; i < result.hits.hits.length; i++) {
@@ -761,7 +761,7 @@ Db.clearScroll = async (params) => {
   return internals.client7.clearScroll(params);
 };
 
-Db.deleteDocument = async (index, type, id, options) => {
+Db.deleteDocument = async (index, id, options) => {
   const params = { index: fixIndex(index), id };
   Db.merge(params, options);
   return internals.client7.delete(params);
@@ -952,7 +952,7 @@ Db.nodesInfo = async (options) => {
   return internals.client7.nodes.info(options);
 };
 
-Db.update = async (index, type, id, doc, options) => {
+Db.update = async (index, id, doc, options) => {
   const params = {
     id,
     body: doc,
@@ -964,7 +964,7 @@ Db.update = async (index, type, id, doc, options) => {
   return internals.client7.update(params);
 };
 
-Db.updateSession = async (index, id, doc, cb) => {
+Db.updateSession = async (index, id, doc) => {
   const params = {
     retry_on_conflict: 3,
     index: fixIndex(index),
@@ -975,16 +975,15 @@ Db.updateSession = async (index, id, doc, cb) => {
 
   try {
     const { body: data } = await internals.client7.update(params);
-    return cb(null, data);
+    return data;
   } catch (err) {
-    if (err.statusCode !== 403) { return cb(err, {}); }
-    try { // try clearing the index.blocks.write if we got a forbidden response
-      Db.setIndexSettings(fixIndex(index), { body: { 'index.blocks.write': null } });
-      const { body: retryData } = await internals.client7.update(params);
-      return cb(null, retryData);
-    } catch (err) {
-      return cb(err, {});
+    if (err.statusCode !== 403) {
+      throw err;
     }
+
+    await Db.setIndexSettings(fixIndex(index), { body: { 'index.blocks.write': null } });
+    const { body: retryData } = await internals.client7.update(params);
+    return retryData;
   }
 };
 
@@ -1038,7 +1037,7 @@ Db.refresh = async (index, cluster) => {
   }
 };
 
-Db.addTagsToSession = function (index, id, tags, cluster, cb) {
+Db.addTagsToSession = async (index, id, tags, cluster) => {
   const script = `
     if (ctx._source.tags != null) {
       for (int i = 0; i < params.tags.length; i++) {
@@ -1065,10 +1064,10 @@ Db.addTagsToSession = function (index, id, tags, cluster, cb) {
 
   if (cluster) { body.cluster = cluster; }
 
-  Db.updateSession(index, id, body, cb);
+  return Db.updateSession(index, id, body);
 };
 
-Db.removeTagsFromSession = function (index, id, tags, cluster, cb) {
+Db.removeTagsFromSession = async (index, id, tags, cluster) => {
   const script = `
     if (ctx._source.tags != null) {
       for (int i = 0; i < params.tags.length; i++) {
@@ -1095,10 +1094,10 @@ Db.removeTagsFromSession = function (index, id, tags, cluster, cb) {
 
   if (cluster) { body.cluster = cluster; }
 
-  Db.updateSession(index, id, body, cb);
+  return Db.updateSession(index, id, body);
 };
 
-Db.addHuntToSession = function (index, id, huntId, huntName, cb) {
+Db.addHuntToSession = async (index, id, huntId, huntName) => {
   const script = `
     if (ctx._source.huntId != null) {
       ctx._source.huntId.add(params.huntId);
@@ -1123,10 +1122,10 @@ Db.addHuntToSession = function (index, id, huntId, huntName, cb) {
     }
   };
 
-  Db.updateSession(index, id, body, cb);
+  return Db.updateSession(index, id, body);
 };
 
-Db.removeHuntFromSession = function (index, id, huntId, huntName, cb) {
+Db.removeHuntFromSession = async (index, id, huntId, huntName) => {
   const script = `
     if (ctx._source.huntId != null) {
       int index = ctx._source.huntId.indexOf(params.huntId);
@@ -1149,7 +1148,7 @@ Db.removeHuntFromSession = function (index, id, huntId, huntName, cb) {
     }
   };
 
-  Db.updateSession(index, id, body, cb);
+  return Db.updateSession(index, id, body);
 };
 
 /// ///////////////////////////////////////////////////////////////////////////////
@@ -1472,7 +1471,7 @@ Db.getView = async (id) => {
 
 Db.arkimeNodeStats = async (nodeName) => {
   try {
-    const { body: stat } = await Db.get('stats', 'stat', nodeName);
+    const { body: stat } = await Db.get('stats', nodeName);
     return stat._source;
   } catch (err) {
     throw new Error('Unknown node');
@@ -1551,7 +1550,7 @@ Db.loadESId2Info = async (cluster) => {
     cluster
   };
 
-  const data = await Db.search('dstats', 'dstat', query);
+  const data = await Db.search('dstats', query);
   if (!data.hits) { return; }
   for (const hit of data.hits.hits) {
     const id = hit._id.substring(3);
@@ -1574,7 +1573,7 @@ Db.updateESId2Info = (id, nodeName, hostname, cluster) => {
   }
 
   esId2Info.set(`${cluster}-${id}`, { nodeName, hostname });
-  Db.index('dstats', 'dstat', `es:${id}`, { nodeName: `es:${nodeName}`, hostname: `es:${hostname}`});
+  Db.index('dstats', `es:${id}`, { nodeName: `es:${nodeName}`, hostname: `es:${hostname}` });
 };
 
 Db.nodesStatsCache = async (cluster) => {
@@ -1626,42 +1625,33 @@ Db.indicesSettingsCache = async (cluster) => {
   return indicesSettings;
 };
 
-Db.hostnameToNodeids = function (hostname, cb) {
+Db.hostnameToNodeids = async (hostname) => {
   const query = { query: { match: { hostname } } };
-  Db.search('stats', 'stat', query, (err, sdata) => {
-    const nodes = [];
-    if (sdata && sdata.hits && sdata.hits.hits) {
-      for (let i = 0, ilen = sdata.hits.hits.length; i < ilen; i++) {
-        nodes.push(sdata.hits.hits[i]._id);
-      }
-    }
-    cb(nodes);
-  });
+  const sdata = await Db.search('stats', query);
+  // If results, return array of _id, otherwise empty array
+  return sdata?.hits?.hits?.map(hit => hit._id) ?? [];
 };
 
-Db.fileIdToFile = async (node, num, cb) => {
+Db.fileIdToFile = async (node, num) => {
   const key = node + '!' + num;
   const info = internals.fileId2File.get(key);
   if (info !== undefined) {
-    if (cb) {
-      return setImmediate(() => { cb(info); });
-    }
     return info;
   }
 
   let file = null;
   try {
-    const { body: fresult } = await Db.get('files', 'file', node + '-' + num);
+    const { body: fresult } = await Db.get('files', node + '-' + num);
     file = fresult._source;
     internals.fileId2File.set(key, file);
     internals.fileName2File.set(file.name, file);
   } catch (err) { // Cache file is unknown
     internals.fileId2File.delete(key);
   }
-  return cb ? cb(file) : file;
+  return file;
 };
 
-Db.fileNameToFiles = function (fileName, cb) {
+Db.fileNameToFiles = async (fileName) => {
   let query;
   if (fileName[0] === '/' && fileName[fileName.length - 1] === '/') {
     query = { query: { regexp: { name: fileName.substring(1, fileName.length - 1) } }, sort: [{ num: { order: 'desc' } }] };
@@ -1672,16 +1662,17 @@ Db.fileNameToFiles = function (fileName, cb) {
   // Not wildcard/regex check the cache
   if (!query) {
     if (internals.fileName2File.has(fileName)) {
-      return cb([internals.fileName2File.get(fileName)]);
+      return [internals.fileName2File.get(fileName)];
     }
     query = { size: 100, query: { term: { name: fileName } }, sort: [{ num: { order: 'desc' } }] };
   }
 
-  Db.search('files', 'file', query, (err, data) => {
-    const files = [];
-    if (err || !data.hits) {
-      return cb(null);
+  try {
+    const data = await Db.search('files', query);
+    if (!data.hits) {
+      return null;
     }
+    const files = [];
     data.hits.hits.forEach((hit) => {
       const file = hit._source;
       const key = file.node + '!' + file.num;
@@ -1689,12 +1680,14 @@ Db.fileNameToFiles = function (fileName, cb) {
       internals.fileName2File.set(file.name, file);
       files.push(file);
     });
-    return cb(files);
-  });
+    return files;
+  } catch (err) {
+    return null;
+  }
 };
 
 Db.getSequenceNumber = async (sName) => {
-  const { body: sinfo } = await Db.index('sequence', 'sequence', sName, {});
+  const { body: sinfo } = await Db.index('sequence', sName, {});
   return sinfo._version;
 };
 
@@ -1759,12 +1752,12 @@ Db.checkVersion = async function (minVersion) {
   ArkimeUtil.checkArkimeSchemaVersion(internals.client7, internals.prefix, minVersion);
 };
 
-Db.isLocalView = async function (node, yesCB, noCB) {
+Db.isLocalView = async function (node) {
   if (node === internals.nodeName) {
     if (internals.debug > 1) {
       console.log(`DEBUG: node:${node} is local view because equals ${internals.nodeName}`);
     }
-    return yesCB();
+    return true;
   }
 
   try {
@@ -1773,29 +1766,28 @@ Db.isLocalView = async function (node, yesCB, noCB) {
       if (internals.debug > 1) {
         console.log(`DEBUG: node:${node} is NOT local view because ${stat.hostname} != ${os.hostname()} or --host ${internals.hostName}`);
       }
-      noCB();
+      return false;
     } else {
       if (internals.debug > 1) {
         console.log(`DEBUG: node:${node} is local view because ${stat.hostname} == ${os.hostname()} or --host ${internals.hostName}`);
       }
-      yesCB();
+      return true;
     }
   } catch (err) {
     if (internals.debug > 1) {
       console.log(`DEBUG: node:${node} is NOT local view because error ${err} ${os.hostname()} ${internals.hostName}`);
     }
-    noCB();
+    return false;
   }
 };
 
-Db.deleteFile = function (node, id, path, cb) {
-  fs.unlink(path, (err) => {
-    if (err) {
-      console.log('EXPIRE - error deleting file', node, id, path, err);
-    }
-    Db.deleteDocument('files', 'file', id);
-    cb();
-  });
+Db.deleteFile = async (node, id, path) => {
+  try {
+    await fs.promises.unlink(path);
+  } catch (err) {
+    console.log('EXPIRE - error deleting file', node, id, path, err);
+  }
+  await Db.deleteDocument('files', id);
 };
 
 Db.session2Sid = function (item) {
@@ -1885,7 +1877,7 @@ Db.sid2Index = function (id, options) {
 };
 
 Db.loadFields = async () => {
-  return Db.search('fields', 'field', { size: 10000 });
+  return Db.search('fields', { size: 10000 });
 };
 
 Db.getSessionIndices = function (excludeExtra) {
