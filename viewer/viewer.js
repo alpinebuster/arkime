@@ -364,23 +364,23 @@ function createSessionDetail () {
   dirs = dirs.concat(Config.getArray('pluginsDir', `${version.config_prefix}/plugins`));
   dirs = dirs.concat(Config.getArray('parsersDir', `${version.config_prefix}/parsers`));
 
-  dirs.forEach(function (dir) {
+  for (const dir of dirs) {
     try {
       const files = fs.readdirSync(dir);
       // sort().reverse() so in this dir pug is processed before jade
-      files.sort().reverse().forEach(function (file) {
+      for (const file of files.sort().reverse()) {
         const sfile = file.replace(/\.(pug|jade)/, '');
         if (found[sfile]) {
-          return;
+          continue;
         }
         if (file.match(/\.detail\.jade$/i)) {
           found[sfile] = fs.readFileSync(dir + '/' + file, 'utf8').replace(/^/mg, '  ') + '\n';
         } else if (file.match(/\.detail\.pug$/i)) {
           found[sfile] = '  include ' + dir + '/' + file + '\n';
         }
-      });
+      }
     } catch (e) {}
-  });
+  }
 
   const customViews = Config.keys('custom-views') || [];
 
@@ -404,9 +404,9 @@ function createSessionDetail () {
                                  '  b-card-group(columns)\n' +
                                  '    b-card\n' +
                                  '      include views/sessionDetail\n';
-    Object.keys(found).sort().forEach(function (k) {
+    for (const k of Object.keys(found).sort()) {
       internals.sessionDetailNew += found[k].replaceAll(/^/mg, '  ') + '\n';
-    });
+    }
 
     let spaces;
     let state = 0;
@@ -783,27 +783,27 @@ function loadPlugins () {
   };
   const plugins = Config.getArray('viewerPlugins', '');
   const dirs = Config.getArray('pluginsDir', `${version.config_prefix}/plugins`);
-  plugins.forEach(function (plugin) {
-    plugin = plugin.trim();
-    if (plugin === '') {
-      return;
+  for (const plugin of plugins) {
+    const pluginTrimmed = plugin.trim();
+    if (pluginTrimmed === '') {
+      continue;
     }
     let found = false;
-    dirs.forEach(function (dir) {
-      dir = dir.trim();
-      if (found || dir === '') {
-        return;
+    for (const dir of dirs) {
+      const dirTrimmed = dir.trim();
+      if (found || dirTrimmed === '') {
+        continue;
       }
-      if (fs.existsSync(dir + '/' + plugin)) {
+      if (fs.existsSync(dirTrimmed + '/' + pluginTrimmed)) {
         found = true;
-        const p = require(dir + '/' + plugin);
+        const p = require(dirTrimmed + '/' + pluginTrimmed);
         p.init(Config, internals.pluginEmitter, api);
       }
-    });
-    if (!found) {
-      console.log("WARNING - Couldn't find plugin", plugin, 'in', dirs);
     }
-  });
+    if (!found) {
+      console.log("WARNING - Couldn't find plugin", pluginTrimmed, 'in', dirs);
+    }
+  }
 }
 
 // session helpers ------------------------------------------------------------
@@ -1804,7 +1804,7 @@ app.post( // sessions send endpoint - used by vueapp
   SessionAPIs.sendSessions
 );
 
-app.post( // sessions recieve endpoint
+app.post( // sessions receive endpoint
   ['/api/sessions/receive', '/receiveSession'],
   [ArkimeUtil.noCacheJson],
   SessionAPIs.receiveSession
@@ -2192,7 +2192,7 @@ process.on('unhandledRejection', (reason, p) => {
 async function premain () {
   await Config.initialize({ initAuth: true });
 
-  Db.initialize({
+  await Db.initialize({
     host: internals.elasticBase,
     prefix: internals.prefix,
     queryExtraIndices: Config.getArray('queryExtraIndices', ''),
@@ -2216,8 +2216,9 @@ async function premain () {
     usersEsBasicAuth: Config.get('usersElasticsearchBasicAuth', null),
     isPrimaryViewer: CronAPIs.isPrimaryViewer,
     getCurrentUserCB: UserAPIs.getCurrentUserCB,
-    maxConcurrentShardRequests: Config.get('esMaxConcurrentShardRequests')
-  }, main);
+    maxConcurrentShardRequests: Config.get('esMaxConcurrentShardRequests'),
+    regressionTests: Config.regressionTests
+  });
 
   Notifier.initialize({
     prefix: Config.get('usersPrefix', Config.get('prefix', 'arkime')),
@@ -2226,6 +2227,7 @@ async function premain () {
 
   CronAPIs.initialize({
   });
+  main();
 }
 
 premain();

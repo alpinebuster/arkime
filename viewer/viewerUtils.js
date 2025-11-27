@@ -99,7 +99,7 @@ class ViewerUtils {
       }
     } else {
       const queryDate = reqQuery.date || 1;
-      startTimeSec = (Math.floor(Date.now() / 1000) - 60 * 60 * parseInt(queryDate, 10));
+      startTimeSec = (Math.floor(Date.now() / 1000) - 60 * 60 * parseFloat(queryDate));
       stopTimeSec = Date.now() / 1000;
 
       if (queryDate <= 5 * 24) {
@@ -162,9 +162,9 @@ class ViewerUtils {
           err = "File '" + fileName + "' not found";
         } else if (files.length > 1) {
           obj.bool = { should: [] };
-          files.forEach(function (file) {
+          for (const file of files) {
             obj.bool.should.push({ bool: { filter: [{ term: { node: file.node } }, { term: { fileId: file.num } }] } });
-          });
+          }
         } else {
           obj.bool = { filter: [{ term: { node: files[0].node } }, { term: { fileId: files[0].num } }] };
         }
@@ -307,17 +307,17 @@ class ViewerUtils {
       return {};
     }
 
-    aggregations.mapG1.buckets.forEach(function (item) {
+    for (const item of aggregations.mapG1.buckets) {
       map.src[item.key] = item.doc_count;
-    });
+    }
 
-    aggregations.mapG2.buckets.forEach(function (item) {
+    for (const item of aggregations.mapG2.buckets) {
       map.dst[item.key] = item.doc_count;
-    });
+    }
 
-    aggregations.mapG3.buckets.forEach(function (item) {
+    for (const item of aggregations.mapG3.buckets) {
       map.xffGeo[item.key] = item.doc_count;
-    });
+    }
 
     return map;
   };
@@ -367,7 +367,7 @@ class ViewerUtils {
       return graph;
     }
 
-    aggregations.dbHisto.buckets.forEach(function (item) {
+    for (const item of aggregations.dbHisto.buckets) {
       const key = item.key;
 
       // always add session information
@@ -399,7 +399,7 @@ class ViewerUtils {
           }
         }
       }
-    });
+    }
 
     return graph;
   };
@@ -548,7 +548,11 @@ class ViewerUtils {
       if (Config.debug > 1) {
         console.log(`DEBUG: node:${node} is using ${url} because viewUrl was set for ${node} in config file`);
       }
-      cb(null, url, url.slice(0, 5) === 'https' ? https : http);
+      if (cb) {
+        cb(null, url, url.slice(0, 5) === 'https' ? https : http);
+      } else {
+        return { viewUrl: url, client: url.slice(0, 5) === 'https' ? https : http };
+      }
       return;
     }
 
@@ -560,12 +564,26 @@ class ViewerUtils {
       }
 
       if (Config.isHTTPS(node)) {
-        cb(null, 'https://' + stat.hostname + ':' + Config.getFull(node, 'viewPort', '8005'), https);
+        const result = 'https://' + stat.hostname + ':' + Config.getFull(node, 'viewPort', '8005');
+        if (cb) {
+          cb(null, result, https);
+        } else {
+          return { viewUrl: result, client: https };
+        }
       } else {
-        cb(null, 'http://' + stat.hostname + ':' + Config.getFull(node, 'viewPort', '8005'), http);
+        const result = 'http://' + stat.hostname + ':' + Config.getFull(node, 'viewPort', '8005');
+        if (cb) {
+          cb(null, result, http);
+        } else {
+          return { viewUrl: result, client: http };
+        }
       }
     } catch (err) {
-      return cb(err);
+      if (cb) {
+        return cb(err);
+      } else {
+        throw err;
+      }
     }
   };
 
@@ -627,19 +645,26 @@ class ViewerUtils {
   // ----------------------------------------------------------------------------
   // check for anonymous mode before fetching user cache and return anonymous
   // user or the user requested by the userId
-  static getUserCacheIncAnon (userId, cb) {
-    if (Auth.isAnonymousMode()) { // user is anonymous
-      User.getUserCache('anonymous', (err, anonUser) => {
+  static async getUserCacheIncAnon (userId, cb) {
+    try {
+      if (Auth.isAnonymousMode()) { // user is anonymous
+        const anonUser = await User.getUserCache('anonymous');
         const anon = Object.assign(new User(), internals.anonymousUser);
 
         if (anonUser) {
           anon.settings = anonUser.settings || {};
         }
 
+        if (!cb) { return anon; }
         return cb(null, anon);
-      });
-    } else {
-      User.getUserCache(userId, cb);
+      } else {
+        const user = await User.getUserCache(userId);
+        if (!cb) { return user; }
+        return cb(null, user);
+      }
+    } catch (err) {
+      if (cb) { return cb(err, null); }
+      throw err;
     }
   };
 }
