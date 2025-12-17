@@ -498,6 +498,7 @@ async function fixPacketPos (fields) {
         fields.packetPos = newPacketPos;
         return;
       } else {
+        delete fields.packetPos; // can't decode remote
         return;
       }
     } else {
@@ -1539,6 +1540,40 @@ Db.setView = async (id, doc) => {
 };
 Db.getView = async (id) => {
   return internals.usersClient7.get({ index: `${internals.usersPrefix}views`, id });
+};
+
+Db.searchShareables = async (query) => {
+  return internals.usersClient7.search({
+    index: `${internals.usersPrefix}shareables`, body: query, rest_total_hits_as_int: true, version: true
+  });
+};
+
+Db.numberOfShareables = async (query) => {
+  return internals.usersClient7.count({
+    index: `${internals.usersPrefix}shareables`, body: query
+  });
+};
+
+Db.createShareable = async (doc) => {
+  return await internals.usersClient7.index({
+    index: `${internals.usersPrefix}shareables`, body: doc, refresh: 'wait_for', timeout: '10m'
+  });
+};
+
+Db.deleteShareable = async (id) => {
+  return await internals.usersClient7.delete({
+    index: `${internals.usersPrefix}shareables`, id, refresh: true
+  });
+};
+
+Db.setShareable = async (id, doc) => {
+  return await internals.usersClient7.index({
+    index: `${internals.usersPrefix}shareables`, body: doc, id, refresh: true, timeout: '10m'
+  });
+};
+
+Db.getShareable = async (id) => {
+  return internals.usersClient7.get({ index: `${internals.usersPrefix}shareables`, id });
 };
 
 Db.arkimeNodeStats = async (nodeName) => {
