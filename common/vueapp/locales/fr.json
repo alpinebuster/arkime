@@ -110,7 +110,7 @@
     "notifierCount": "Pas de notification | Notification sur 1 notificateur | Notification sur {count} notificateurs"
   },
   "navigation": {
-    "arkime": "Arkime",
+    "arkime": "DTA",
     "sessions": "Sessions",
     "settings": "Paramètres",
     "spiview": "Vue SPI",

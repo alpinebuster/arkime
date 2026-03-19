@@ -110,7 +110,7 @@
     "notifierCount": "Ei teavita | Teavitab 1 teavitajal | Teavitab {count} teavitajal"
   },
   "navigation": {
-    "arkime": "Arkime",
+    "arkime": "DTA",
     "sessions": "Seansid",
     "settings": "Seaded",
     "spiview": "SPI Vaade",
