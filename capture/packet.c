@@ -541,7 +541,7 @@ LOCAL void *arkime_packet_thread(void *threadp)
             // Could do a lock per file pos but this shouldn't happen too often
             ARKIME_LOCK(offlineInfoLock);
             ArkimeOfflineInfo_t *oi = &offlineInfo[packet->readerPos];
-            oi->finishWaiting--;
+            ARKIME_THREAD_DECR(oi->finishWaiting);
             if (oi->finishWaiting == 0) {
                 arkime_db_update_file(oi->outputId, oi->lastBytes, oi->lastBytes, oi->lastPackets, &oi->lastPacketTime, oi->sessionsStarted, oi->sessionsPresent);
             }
@@ -1990,6 +1990,24 @@ void arkime_packet_init()
     arkime_field_define("general", "integer",
                         "tcpflags.urg", "TCP Flag URG", "tcpflags.urg",
                         "Count of packets with URG flag set",
+                        0,  ARKIME_FIELD_FLAG_FAKE,
+                        (char *)NULL);
+
+    arkime_field_define("general", "integer",
+                        "tcpflags.ece", "TCP Flag ECE", "tcpflags.ece",
+                        "Count of packets with ECE flag set",
+                        0,  ARKIME_FIELD_FLAG_FAKE,
+                        (char *)NULL);
+
+    arkime_field_define("general", "integer",
+                        "tcpflags.cwr", "TCP Flag CWR", "tcpflags.cwr",
+                        "Count of packets with CWR flag set",
+                        0,  ARKIME_FIELD_FLAG_FAKE,
+                        (char *)NULL);
+
+    arkime_field_define("general", "integer",
+                        "tcpflags.ae", "TCP Flag AE", "tcpflags.ae",
+                        "Count of packets with AE (Accurate ECN) flag set",
                         0,  ARKIME_FIELD_FLAG_FAKE,
                         (char *)NULL);
 

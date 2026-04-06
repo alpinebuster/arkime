@@ -13,6 +13,14 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
+// Define TCP ECN flags if not provided by system headers
+#ifndef TH_ECE
+#define TH_ECE 0x40
+#endif
+#ifndef TH_CWR
+#define TH_CWR 0x80
+#endif
+
 
 /******************************************************************************/
 extern ArkimeConfig_t        config;
@@ -32,6 +40,9 @@ LOCAL int tcpflagsPshField;
 LOCAL int tcpflagsRstField;
 LOCAL int tcpflagsFinField;
 LOCAL int tcpflagsUrgField;
+LOCAL int tcpflagsEceField;
+LOCAL int tcpflagsCwrField;
+LOCAL int tcpflagsAeField;
 
 /******************************************************************************/
 LOCAL void tcp_mid_save(ArkimeSession_t *session)
@@ -164,6 +175,25 @@ LOCAL int tcp_packet_process(ArkimeSession_t *const session, ArkimePacket_t *con
         ARKIME_RULES_RUN_FIELD_SET(session, tcpflagsUrgField, (gpointer)(long)session->tcpData.tcpFlagCnt[ARKIME_TCPFLAG_URG]);
     }
 
+    if (tcphdr->th_flags & TH_ECE) {
+        session->tcpData.tcpFlagCnt[ARKIME_TCPFLAG_ECE]++;
+        ARKIME_RULES_RUN_FIELD_SET(session, tcpflagsEceField, (gpointer)(long)session->tcpData.tcpFlagCnt[ARKIME_TCPFLAG_ECE]);
+    }
+
+    if (tcphdr->th_flags & TH_CWR) {
+        session->tcpData.tcpFlagCnt[ARKIME_TCPFLAG_CWR]++;
+        ARKIME_RULES_RUN_FIELD_SET(session, tcpflagsCwrField, (gpointer)(long)session->tcpData.tcpFlagCnt[ARKIME_TCPFLAG_CWR]);
+    }
+
+#if defined(__linux__)
+    if (tcphdr->res1 & 0x01) {
+#else
+    if (tcphdr->th_x2 & 0x01) {
+#endif
+        session->tcpData.tcpFlagCnt[ARKIME_TCPFLAG_AE]++;
+        ARKIME_RULES_RUN_FIELD_SET(session, tcpflagsAeField, (gpointer)(long)session->tcpData.tcpFlagCnt[ARKIME_TCPFLAG_AE]);
+    }
+
     // add to the long open
     if (!session->tcp_next) {
         DLL_PUSH_TAIL(tcp_, &arkimeThreadData[session->thread].tcpWriteQ, session);
@@ -186,8 +216,8 @@ LOCAL int tcp_packet_process(ArkimeSession_t *const session, ArkimePacket_t *con
             ARKIME_RULES_RUN_FIELD_SET(session, tcpflagsSynField, (gpointer)(long)session->tcpData.tcpFlagCnt[ARKIME_TCPFLAG_SYN]);
             if (session->tcpData.synTime == 0) {
                 session->tcpData.synSeq[0] = seq;
-                session->tcpData.synTime = (packet->ts.tv_sec - session->firstPacket.tv_sec) * 1000 +
-                                           (packet->ts.tv_usec - session->firstPacket.tv_usec) / 1000 + 1;
+                session->tcpData.synTime = (uint32_t)((packet->ts.tv_sec - session->firstPacket.tv_sec) * 1000 +
+                                                      (packet->ts.tv_usec - session->firstPacket.tv_usec) / 1000 + 1);
                 session->tcpData.ackTime = 0;
             }
         }
@@ -229,8 +259,8 @@ LOCAL int tcp_packet_process(ArkimeSession_t *const session, ArkimePacket_t *con
         }
         ARKIME_RULES_RUN_FIELD_SET(session, tcpflagsAckField, (gpointer)(long)session->tcpData.tcpFlagCnt[ARKIME_TCPFLAG_ACK]);
         if (session->tcpData.ackTime == 0) {
-            session->tcpData.ackTime = (packet->ts.tv_sec - session->firstPacket.tv_sec) * 1000 +
-                                       (packet->ts.tv_usec - session->firstPacket.tv_usec) / 1000 + 1;
+            session->tcpData.ackTime = (uint32_t)((packet->ts.tv_sec - session->firstPacket.tv_sec) * 1000 +
+                                                  (packet->ts.tv_usec - session->firstPacket.tv_usec) / 1000 + 1);
         }
     }
 
@@ -461,4 +491,7 @@ void arkime_parser_init()
     tcpflagsRstField = arkime_field_by_exp("tcpflags.rst");
     tcpflagsFinField = arkime_field_by_exp("tcpflags.fin");
     tcpflagsUrgField = arkime_field_by_exp("tcpflags.urg");
+    tcpflagsEceField = arkime_field_by_exp("tcpflags.ece");
+    tcpflagsCwrField = arkime_field_by_exp("tcpflags.cwr");
+    tcpflagsAeField = arkime_field_by_exp("tcpflags.ae");
 }

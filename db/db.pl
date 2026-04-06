@@ -1189,6 +1189,7 @@ sub fieldsUpdate
 sub fields82Fix
 {
     esPost("/${PREFIX}fields/_update/host.dns.all", '{"doc":{"regex": "^host\\\\.dns(?:(?!\\\\.(cnt|all|tokens)$).)*$"}}', 1);
+    esDelete("/${PREFIX}fields/_doc/snmp.error", 1);
 }
 
 ################################################################################
@@ -6096,10 +6097,19 @@ sub sessions3Update
         "ack" : {
           "type" : "long"
         },
+        "cwr" : {
+          "type" : "long"
+        },
         "dstZero" : {
           "type" : "long"
         },
+        "ece" : {
+          "type" : "long"
+        },
         "fin" : {
+          "type" : "long"
+        },
+        "ae" : {
           "type" : "long"
         },
         "psh" : {

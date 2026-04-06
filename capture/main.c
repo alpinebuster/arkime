@@ -326,16 +326,16 @@ LOCAL void parse_args(int argc, char **argv)
         exit(1);
     }
 
-    if (config.copyPcap && !config.pcapReadOffline) {
-        printf("--copy requires -r or -R\n");
-        exit(1);
-    }
-
     if (config.commandList)
         config.pcapReadOffline = 1;
 
     if ((config.pcapMonitor || config.commandWait) && config.commandSocket) {
         config.pcapReadOffline = 1;
+    }
+
+    if (config.copyPcap && !config.pcapReadOffline) {
+        printf("--copy requires -r or -R\n");
+        exit(1);
     }
 
     if (config.pcapMonitor && !config.pcapReadDirs && !config.commandSocket && !config.commandList) {
@@ -423,8 +423,6 @@ void arkime_check_file_permissions(const char *filename)
     const char          *token;
     char                *save_ptr;
     char                 tmpFilename[PATH_MAX];
-    const struct group  *gr;
-    const struct passwd *pw;
 
     if (strlen (filename) >= PATH_MAX) {
         // filename bigger than path buffer, skip check
@@ -452,8 +450,8 @@ void arkime_check_file_permissions(const char *filename)
         g_strlcat (path, token, sizeof(path));
 
         if (stat(path, &stats) != -1) {
-            gr = getgrgid (stats.st_gid);
-            pw = getpwuid (stats.st_uid);
+            const struct group  *gr = getgrgid (stats.st_gid);
+            const struct passwd *pw = getpwuid (stats.st_uid);
 
             if (stats.st_mode & S_IROTH) {
                 // world readable

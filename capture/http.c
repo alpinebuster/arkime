@@ -767,6 +767,12 @@ LOCAL gboolean arkime_http_send_timer_callback(gpointer UNUSED(unused))
         LOG("HTTPDEBUG DO %p %d %s", request, request->server->outstanding, request->url);
 #endif
         curl_multi_add_handle(request->server->multi, request->easy);
+
+        /* Kick-start the transfer immediately after adding the handle.
+         * This is the recommended libcurl pattern for event-driven
+         * curl_multi_socket usage - ensures the transfer begins without
+         * waiting for the next timer or socket event. */
+        curl_multi_socket_action(request->server->multi, CURL_SOCKET_TIMEOUT, 0, &request->server->multiRunning);
     }
 
     return G_SOURCE_REMOVE;
