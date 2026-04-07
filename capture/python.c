@@ -47,6 +47,30 @@ LOCAL __thread int arkimeReaderThread = -1;
 LOCAL int loadingThread = -1;
 
 /******************************************************************************/
+static PyObject *global_torch = NULL;
+
+static PyObject *arkime_get_torch_module(PyObject *self, PyObject *args) {
+    if (!global_torch) {
+        PyErr_SetString(PyExc_RuntimeError, "Torch module not initialized");
+        return NULL;
+    }
+    Py_INCREF(global_torch);
+    return global_torch;
+}
+
+void arkime_python_init_torch() {
+    PyGILState_STATE gstate = PyGILState_Ensure();
+
+    global_torch = PyImport_ImportModule("torch");
+    if (!global_torch) {
+        PyErr_Print();
+        LOGEXIT("Failed to import torch");
+    }
+
+    PyGILState_Release(gstate);
+}
+
+/******************************************************************************/
 LOCAL void arkime_python_cb_map_free(gpointer data)
 {
     ARKIME_TYPE_FREE(ArkimePyCbMap_t, data);
@@ -514,6 +538,7 @@ LOCAL PyMethodDef arkime_methods[] = {
     { "register_pre_save", arkime_python_register_pre_save, METH_VARARGS, NULL },
     { "field_define", arkime_python_field_define, METH_VARARGS, NULL },
     { "field_get", arkime_python_field_get, METH_VARARGS, NULL },
+    { "get_torch_module", arkime_get_torch_module, METH_NOARGS, "Get torch module from C" },
     {NULL, NULL, 0, NULL}
 };
 
@@ -1843,6 +1868,8 @@ void arkime_python_init()
 
     arkime_parsers_register_load_extension(".py", arkime_python_pp_load);
     arkime_plugins_register_load_extension(".py", arkime_python_pp_load);
+
+    arkime_python_init_torch();
 
     arkimePyCbMap = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, arkime_python_cb_map_free);
 
