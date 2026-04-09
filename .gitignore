@@ -5,7 +5,7 @@
 *.val
 .*.swp
 .idea
-.vscode
+# .vscode
 *.suo
 *.ntvs*
 *.njsproj
