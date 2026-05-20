@@ -41,7 +41,7 @@ typedef struct writer_s3_file {
     int                        partNumber;
     int                        partNumberResponses;
     char                       doClose;
-    char                      *partNumbers[2001];
+    char                      *partNumbers[10001];
 
     char                      *outputBuffer;
     uint32_t                   outputPos;
@@ -217,7 +217,8 @@ LOCAL void writer_s3_part_cb (int code, uint8_t *data, int len, gpointer uw)
         BSB_INIT(bsb, buf, 1000000);
         BSB_EXPORT_cstr(bsb, "<CompleteMultipartUpload>\n");
         int i;
-        for (i = 1; i < file->partNumber; i++) {
+        const int last = MIN(file->partNumber, (int)ARRAY_LEN(file->partNumbers));
+        for (i = 1; i < last; i++) {
             BSB_EXPORT_sprintf(bsb, "<Part><PartNumber>%d</PartNumber><ETag>%s</ETag></Part>\n", i, file->partNumbers[i]);
             g_free(file->partNumbers[i]);
         }
@@ -311,7 +312,11 @@ LOCAL void writer_s3_init_cb (int code, uint8_t *data, int len, gpointer uw)
         LOG("Init-Response: %s %d", file->outputFileName, len);
 
     if (len == 0) {
-        writer_s3_request("POST", file->outputPath, "uploads=", 0, 0, TRUE, writer_s3_init_cb, file);
+        if ((code >= 200 && code < 300) || code == 0) {
+            writer_s3_request("POST", file->outputPath, "uploads=", 0, 0, TRUE, writer_s3_init_cb, file);
+        } else {
+            LOG("ERROR - S3 init failed code=%d for %s, giving up", code, file->outputFileName);
+        }
         return;
     }
 
@@ -359,7 +364,7 @@ LOCAL void writer_s3_header_cb (char *url, const char *field, const char *value,
     if (pn < 0 || pn >= ARRAY_LEN(file->partNumbers))
         return;
 
-    if (*value == '"')
+    if (*value == '"' && valueLen >= 2)
         file->partNumbers[pn] = g_strndup(value + 1, valueLen - 2);
     else
         file->partNumbers[pn] = g_strndup(value, valueLen);
@@ -370,7 +375,7 @@ LOCAL void writer_s3_header_cb (char *url, const char *field, const char *value,
 /******************************************************************************/
 LOCAL void writer_s3_request(const char *method, const char *path, const char *qs, const uint8_t *data, int len, gboolean specifyStorageClass, ArkimeHttpResponse_cb cb, gpointer uw)
 {
-    char           canonicalRequest[20000];
+    char           canonicalRequest[10000];
     char           datetime[17];
     char           objectkey[1000];
     char           fullpath[2000];
@@ -493,7 +498,7 @@ LOCAL void writer_s3_request(const char *method, const char *path, const char *q
     snprintf(fullpath, sizeof(fullpath), "%s?%s", objectkey, qs);
     //LOG("fullpath: %s", fullpath);
 
-    char strs[3][1000];
+    char strs[3][512];
     char *headers[8];
     headers[0] = "Expect:";
     headers[1] = "Content-Type:";

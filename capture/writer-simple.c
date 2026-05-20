@@ -640,6 +640,7 @@ LOCAL void writer_simple_write(const ArkimeSession_t *const session, ArkimePacke
         }
 
         /* If offline pcap honor umask, otherwise disable other RW */
+        unlink(name);
         if (config.pcapReadOffline) {
             simpleThreadData[thread].currentInfo->file->fd = open(name,  openOptions, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
         } else {
@@ -913,6 +914,10 @@ LOCAL void writer_simple_index (ArkimeSession_t *session)
     for (guint i = 0; i < session->filePosArray->len; i++) {
         int64_t packetPos = (int64_t)g_array_index(session->filePosArray, int64_t, i);
         if (packetPos < 0) {
+            if (files >= 340) {
+                LOG("WARNING - session has too many file rotations (%d), truncating index", files);
+                break;
+            }
             if (fp) {
                 filePos[(files - 1) * 3 + 2] = BSB_LENGTH(bsb);
                 fwrite(buf, BSB_LENGTH(bsb), 1, fp);
@@ -1064,6 +1069,7 @@ void writer_simple_init(const char *name)
         simpleDEKMode = ARKIME_DEK_AES256GCM;
     } else if (strcmp(dekMode, "aes-192-cbc") == 0) {
         simpleDEKMode = ARKIME_DEK_AES192CBC;
+        LOG("WARNING - simpleDEKEncoding aes-192-cbc is INSECURE, set simpleDEKEncoding=aes-256-gcm once all instances are upgraded to Arkime 6.2.0 or later");
     } else {
         CONFIGEXIT("Unknown simpleDEKEncoding '%s', must be 'aes-256-gcm' or 'aes-192-cbc'", dekMode);
     }
@@ -1077,6 +1083,9 @@ void writer_simple_init(const char *name)
     }
 
     openOptions = O_NOATIME | O_WRONLY | O_CREAT | O_TRUNC;
+#ifdef O_EXCL
+    openOptions |= O_EXCL;
+#endif
     if (strcmp(name, "simple") == 0) {
 #ifdef O_DIRECT
         openOptions |= O_DIRECT;

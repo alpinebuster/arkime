@@ -7,6 +7,7 @@
  */
 
 #include <inttypes.h>
+#include <sys/stat.h>
 #include "gio/gio.h"
 #include "glib-object.h"
 #include "arkime.h"
@@ -50,7 +51,7 @@ LOCAL gboolean arkime_command_run(const char *line, gpointer cc)
     GError *error = NULL;
 
     if (!g_shell_parse_argv(line, &argcp, &argvp, &error)) {
-        g_error_free(error);
+        g_clear_error(&error);
         arkime_command_respond(cc, "No command sent\n", -1);
         return TRUE;
     }
@@ -154,6 +155,11 @@ void arkime_command_register(const char *name, ArkimeCommandFunc func, const cha
         commandsArray = g_ptr_array_new();
     }
 
+    if (g_hash_table_contains(commandsHash, name)) {
+        LOG("WARNING - Command '%s' already registered, ignoring duplicate", name);
+        return;
+    }
+
     Command_t *cmd = ARKIME_TYPE_ALLOC0(Command_t);
     cmd->name = g_strdup(name);
     cmd->func = func;
@@ -173,6 +179,11 @@ void arkime_command_register_opts(const char *name, ArkimeCommandFunc func, cons
     if (!commandsHash) {
         commandsHash = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, arkime_command_free);
         commandsArray = g_ptr_array_new();
+    }
+
+    if (g_hash_table_contains(commandsHash, name)) {
+        LOG("WARNING - Command '%s' already registered, ignoring duplicate", name);
+        return;
     }
 
     Command_t *cmd = ARKIME_TYPE_ALLOC0(Command_t);
@@ -233,7 +244,7 @@ void arkime_command_client_incref(void *vcc)
 void arkime_command_client_decref(void *vcc)
 {
     CommandClient_t *cc = (CommandClient_t *)vcc;
-    int newrefs = ARKIME_THREAD_DECRNEW(cc->refs)
+    int newrefs = ARKIME_THREAD_DECRNEW(cc->refs);
     if (newrefs == 0) {
         g_object_unref(cc->socket);
         ARKIME_TYPE_FREE(CommandClient_t, cc);
@@ -365,19 +376,21 @@ void arkime_command_init()
     socket = g_socket_new (G_SOCKET_FAMILY_UNIX, G_SOCKET_TYPE_STREAM, 0, &error);
 
     if (!socket || error) {
-        CONFIGEXIT("Error creating command: %s", error->message);
+        CONFIGEXIT("Error creating command: %s", error ? error->message : "unknown error");
     }
 
     unlink(config.commandSocket);
     addr = g_unix_socket_address_new (config.commandSocket);
 
     if (!g_socket_bind (socket, addr, TRUE, &error)) {
-        CONFIGEXIT("Error binding command socket: %s", error->message);
+        CONFIGEXIT("Error binding command socket: %s", error ? error->message : "unknown error");
     }
     g_object_unref (addr);
 
+    chmod(config.commandSocket, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+
     if (!g_socket_listen (socket, &error)) {
-        CONFIGEXIT("Error listening command socket: %s", error->message);
+        CONFIGEXIT("Error listening command socket: %s", error ? error->message : "unknown error");
     }
 
     int fd = g_socket_get_fd(socket);

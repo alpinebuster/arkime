@@ -35,19 +35,116 @@ NOTICE: Restart wiseService before capture when upgrading
 NOTICE: Cross-cluster Shortcuts require you to not restart all your viewers at once after upgrading
 NOTICE: Create a parliament config file before upgrading (see https://arkime.com/settings#parliament and https://arkime.com/faq#how_do_i_upgrade_to_arkime_5)
 
-6.1.2 2026/04/xx
+6.3.2 2026/05/xx
+## Breaking
+  - #3967 All header* auth modes (header, header-jwt, headerOnly, header+digest, header+basic) now
+          default userAuthIps to localhost-only when not explicitly configured
+  - #3982 docker.sh: TLS verification is now enforced by default for Elasticsearch/OpenSearch
+          connections, use `--insecure` to skip verification
+  - #3983 multies now defaults `multiESHost` to `127.0.0.1` instead of binding to all interfaces.
+## Release
+  - #3941 Move to using curl instead of wget everywhere and now depend on curl package
+  - #3975 Node 22.22.3
+## All
+  - #3951 Fix UTF-8 mojibake in user names auto-created via header auth (e.g. behind Caddy/oauth2-proxy)
+## Capture
+  - #3954 Add trimEthernetPadding option to strip Ethernet padding/FCS so saved pcap and byte counts match the on-wire IP length
+  - #3957 Even when not writing packets still save new sessions midway
+  - #3958 Add stateDir config option (default /tmp) for capture state files (drophash, stoppedsessions)
+  - #3958 State files now opened with O_NOFOLLOW to prevent symlink attacks
+  - #3958 PCAP files now opened with O_NOFOLLOW to prevent symlink attacks
+  - #3962 Improved websocket parser; adds websocket.* fields and websocketTextSampleCnt config option
+  - #3963 Improved mDNS parsing: handle aggregated queries, unsolicited responses, and flags
+  - DNS TXT records now capture multiple items
+  - #3965 Add diameter.resultCode field (AVP 268) for 4G/5G core auth/error tracking
+  - #3965 Add dnp3.funcName and s7comm.funcName decoded ICS function-code names
+  - #3965 Add mqtt.connackCode for CONNACK return/reason codes
+  - #3965 Add snmp.engineId and snmp.secLevel SNMPv3 fields
+  - #3966 Add enip parser
+  - #3969 Include up to 12 bytes of UDP payload in the packet dedup hash so RTP and
+          other UDP traffic with identical headers is no longer over-deduplicated
+  - #3970 Added full OpenVPN classifier/parser
+  - #3972 Improved STUN/TURN parser: extract XOR-PEER-ADDRESS, more methods, and stun.attributes field
+  - #3973 Improved OSPF parser: per-(src,dst) sessions and ospf.msgType/routerId/areaId fields, tag weak auth
+  - #3977 Improved RADIUS parser: extract radius.msgType, radius.nasIp, and radius.nasPort
+  - #3978 New FTP parser: detect multi-line 220- banners and add ftp.banner, ftp.command,
+          ftp.filename, ftp.responseCode fields; tag ftp:password when PASS is seen
+  - #3985 Add shared NTLMSSP decoder with ntlm.* fields, wired into SMB, HTTP, LDAP, DCE-RPC, SMTP, IMAP, POP3, and TDS parsers
+  - #3985 Add new POP3 parser that captures USER name and NTLM auth blobs
+  - #3988 Fix command-socket `--notify` without `--flush` crashing capture
+  - #3988 Fix crash when using rules with bpfs and different DLTs without using `--flush`
+## Multies
+  - #3983 Support optional HTTP Basic auth via the new `multiESBasicAuth` setting
+## WISE
+  - #3968 Improve JSON Array Parsing: shortcut paths now expand arrays at any
+          intermediate position, not just the final value
+
+6.3.1 2026/05/04
+## Capture
+  - #3940 Fix ISAKMP parser on UDP/4500 (NAT-T) misparsed ESP packets without the non-ESP marker
+## Viewer
+  - #3942 Fix hiding packets when we shouldn't
+
+6.3.0 2026/05/04
+## BREAKING
+  - #3911 ArkimeParserBuf_t.buf is now a heap-allocated pointer (uint8_t *buf[2]).
+          You must use pb->bufSize[which] instead of sizeof(pb->buf[which])
+## All
+  - #3920 Log more information on role failures
+## Capture
+  - #3910 Corrupt UDP packets could have invalid byte counts
+  - #3910 TCP DNS packets might not be parsed correctly depending on segmentation
+  - #3911, #3913 TCP sequence wrapping tests and improvements
+  - #3912 Fix IKEv2 encryption/hash parsing
+  - #3913 Fix WISE plugin skipping fields after array-typed fields
+  - #3913 Fix S3 listing deadlock when bucket/prefix is empty
+  - #3914 Fix ASN.1 OID decoding of first arc per X.690
+  - #3916 Improved NTP and IS-IS parsing
+  - #3917 Improved LUA ip handling
+  - #3917 Add DHCPv6 relay parsing
+  - #3917 Improved SMB parsing of share/filename
+  - #3917 Improved SNMP GetBulkRequest parsing
+  - #3917 Extract VNI from GENEVE tunnels
+  - #3918 scheme http no longer requires a port (defaults to 80/443)
+  - #3918 fix SNMP sessions showing up as LDAP too
+  - #3919 Remove ftp protocol if we are sure smtp
+  - #3923 Packets with more than 8 VLANs marked as corrupt
+  - #3923 UDP packets enforce length correctly
+  - #3924, #3930 Remove trailing slash from wiseURL
+  - #3927 Cap IMAP/SMTP/HTTP Header buffer lengths
+  - #3932 Skip byte-based UDP classifiers on UDP/53 to avoid DNS false-matches
+  - #3933 Reassemble TLS ClientHello across multiple QUIC Initial packets
+  - #3935 Validate QUIC packet lengths
+## Cont3xt
+  - #3928 Threatstream: ignore per-user host override unless user/key also per-user
+  - #3928 csvjson: add 60s timeout and 1GB content/body limits on remote feed loads
+## Viewer
+  - #3898 show error msg in spiview when All selected but not allowed
+  - #3906 add copy button to History Elasticsearch Query section
+  - #3908 fix download entire pcap missing filename
+  - #3921 Fix Cap Restart graph markers, Session Detail labels slider
+          width, Field Actions dropdown, Stats Shrink Index,
+          and shortcut ($) autocomplete in search expression
+  - #3928 Cap /api/sessions/summary length parameter at 1000
+  - #3931 Remove last manualQuery option which wasn't implemented
+  - #3934 Fix not handling sessions correctly with no PCAP
+
+6.2.0 2026/04/20
 ## BREAKING
   - #3874 The user-auto-create and user-role-mappings sections now limit what 
           loop and exception Javascript can be used for security.
+  - #3881 Command sockets now chmod(0660) and removes Other access.
 ## Release
   - #3864 CyberChef 10.23.0
   - #3870 docker.sh supports generic --db with help examples
 ## All
-  - #3831 New TOTP support for wise config instead of code
+  - #3831 New TOTP support for wise config instead of code - requires db.pl upgrade
   - #3865 Add syslog notifier
   - #3866 Add snmp notifier
+  - #3888 Can now use - for password with addUser.js to get prompted
 ## Capture
   - #3871 Packets with more than 10 ip/ethernet headers are now marked as corrupt
+  - #3896 Improve MQTT parsing and tests
 ## Capture/Viewer
   - #3833 New simpleDEKEncoding setting which controls how the DEK is encrypted
   - #3857 Fix scheme pcapNG not handling large files (thanks @wegman12)
@@ -56,6 +153,9 @@ NOTICE: Create a parliament config file before upgrading (see https://arkime.com
 ## Viewer
   - #3842 Add internationalized aria-labels
   - #3863 Add per-cluster serverSecret in S2S auth for multicluster pcap retrieval
+  - #3878 Add JWT decoding support for header auth mode
+  - #3877 Add ESIndices codec column
+  - #3891 Improve tcp reassembly display when packets are retransmitted
 
 6.1.1 2026/04/06
 ## BREAKING

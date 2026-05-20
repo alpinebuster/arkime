@@ -148,11 +148,22 @@ LOCAL void bacnet_parse_object_name(ArkimeSession_t *session, BSB *bsb)
             uint32_t strLen = 0;
 
             if (lenByte == 5) {
-                // Extended length - next byte is length
+                // Extended length encoding (ASHRAE 135 §20.2.1.3.1):
+                //   next byte is length, unless it is 254 (u16 follows) or 255 (u32 follows)
                 if (BSB_REMAINING(*bsb) < 1) return;
                 uint8_t extLen = 0;
                 BSB_IMPORT_u08(*bsb, extLen);
-                strLen = extLen;
+                if (extLen < 254) {
+                    strLen = extLen;
+                } else if (extLen == 254) {
+                    if (BSB_REMAINING(*bsb) < 2) return;
+                    uint16_t extLen16 = 0;
+                    BSB_IMPORT_u16(*bsb, extLen16);
+                    strLen = extLen16;
+                } else { // 255
+                    if (BSB_REMAINING(*bsb) < 4) return;
+                    BSB_IMPORT_u32(*bsb, strLen);
+                }
             } else if (lenByte < 5) {
                 strLen = lenByte;
             } else {
@@ -307,10 +318,13 @@ LOCAL int bacnet_udp_parser(ArkimeSession_t *session, void *UNUSED(uw), const ui
 
     // Parse service for confirmed and unconfirmed requests
     if (apduType == APDU_TYPE_CONFIRMED_REQ) {
-        // Skip max segments/max response, invoke ID
+        // Confirmed-Request PDU layout after type byte:
+        //   Max Segs/Max Resp (1), Invoke ID (1),
+        //   [ Sequence Number (1), Window Size (1) ] if SEG flag set,
+        //   Service Choice (1)
         uint8_t flags = apduTypeByte & 0x0F;
-        if (flags & 0x08) BSB_IMPORT_skip(bsb, 1);  // Segmented
         BSB_IMPORT_skip(bsb, 2);  // Max segs/resp + invoke ID
+        if (flags & 0x08) BSB_IMPORT_skip(bsb, 2);  // Segmented: seq + window size
 
         if (BSB_REMAINING(bsb) >= 1) {
             uint8_t serviceChoice = 0;
@@ -332,8 +346,13 @@ LOCAL int bacnet_udp_parser(ArkimeSession_t *session, void *UNUSED(uw), const ui
             }
         }
     } else if (apduType == APDU_TYPE_COMPLEX_ACK) {
-        // Complex ACK may contain object names in ReadProperty responses
+        // Complex-ACK PDU layout after type byte:
+        //   Invoke ID (1),
+        //   [ Sequence Number (1), Window Size (1) ] if SEG flag set,
+        //   Service ACK Choice (1)
+        uint8_t flags = apduTypeByte & 0x0F;
         BSB_IMPORT_skip(bsb, 1);  // Invoke ID
+        if (flags & 0x08) BSB_IMPORT_skip(bsb, 2);  // Segmented: seq + window size
         if (BSB_REMAINING(bsb) >= 1) {
             uint8_t serviceChoice = 0;
             BSB_IMPORT_u08(bsb, serviceChoice);
@@ -349,8 +368,6 @@ LOCAL int bacnet_udp_parser(ArkimeSession_t *session, void *UNUSED(uw), const ui
 /******************************************************************************/
 LOCAL void bacnet_udp_classify(ArkimeSession_t *session, const uint8_t *data, int len, int UNUSED(which), void *UNUSED(uw))
 {
-    ARKIME_RETURN_IF_DNS_PORT;
-
     if (arkime_session_has_protocol(session, "bacnet"))
         return;
 

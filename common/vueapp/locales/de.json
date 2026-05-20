@@ -759,7 +759,8 @@
       "molochtype": "Heiß/Warm",
       "shardsPerNode": "Shards/Knoten",
       "versionCreated": "ES-Version",
-      "docSize": "Festplatte pro Dokument"
+      "docSize": "Festplatte pro Dokument",
+      "codec": "Codec"
     },
     "esNodes": {
       "mainManaging": "Hauptverwaltungsknoten",
@@ -1758,6 +1759,8 @@
       "missingList": "Sitzungsliste fehlt",
       "noSessionsFound": "Keine Sitzungen gefunden",
       "cantGetSessions": "Sitzungen können nicht von IDs abgerufen werden",
+      "allDateNotAllowedSpiview": "Datumsbereich 'Alle' ist für Spiview-Abfragen nicht zulässig",
+      "spiviewFetchError": "Fehler beim Abrufen der Spiview-Daten",
       "badFieldParam": "Ungültiger 'field'-Parameter",
       "missingExpParam": "exp-Parameter fehlt",
       "sessionNotFound": "Sitzung nicht gefunden",

@@ -144,11 +144,16 @@
      64
     ],
     "srcTTLCnt" : 1,
-    "totDataBytes" : 384
+    "totDataBytes" : 384,
+    "vni" : [
+     "10",
+     "11"
+    ],
+    "vniCnt" : 2
    },
    "header" : {
     "index" : {
-     "_index" : "tests_sessions3-150201"
+     "_index" : "tests_sessions3-15m02"
     }
    }
   },
@@ -382,11 +387,16 @@
      "dst" : 0,
      "src" : 397610159
     },
-    "totDataBytes" : 4396
+    "totDataBytes" : 4396,
+    "vni" : [
+     "10",
+     "11"
+    ],
+    "vniCnt" : 2
    },
    "header" : {
     "index" : {
-     "_index" : "tests_sessions3-150201"
+     "_index" : "tests_sessions3-15m02"
     }
    }
   }

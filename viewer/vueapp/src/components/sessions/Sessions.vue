@@ -883,7 +883,7 @@ export default {
     window.addEventListener('resize', windowResizeEvent, { passive: true });
 
     UserService.getState('sessionDetailDLWidth').then((response) => {
-      this.$store.commit('setSessionDetailDLWidth', response.data?.width ?? 160);
+      this.$store.commit('setSessionDetailDLWidth', response?.width ?? 160);
     });
   },
   computed: {
@@ -1729,7 +1729,10 @@ export default {
       });
     },
     shouldIssueQuery: function () {
-      const manualQuery = this.user.settings.manualQuery && JSON.parse(this.user.settings.manualQuery);
+      let manualQuery = this.user.settings.manualQuery;
+      if (typeof manualQuery === 'string') {
+        manualQuery = manualQuery === 'true';
+      }
       const hasExpression = this.query.expression && this.query.expression.length;
       return searchIssued || !manualQuery || (manualQuery && hasExpression);
     },
@@ -1829,8 +1832,8 @@ export default {
         pendingPromise = { controller, cancelId };
 
         const response = await fetcher; // do the fetch
-        if (response.data.error) {
-          throw new Error(response.data.error);
+        if (response.error) {
+          throw new Error(response.error);
         }
 
         pendingPromise = null;

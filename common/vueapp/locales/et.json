@@ -759,7 +759,8 @@
       "molochtype": "Kuum/Soe",
       "shardsPerNode": "Kilde/Sõlm",
       "versionCreated": "ES versioon",
-      "docSize": "Ketas dokumendi kohta"
+      "docSize": "Ketas dokumendi kohta",
+      "codec": "Koodek"
     },
     "esNodes": {
       "mainManaging": "Peamine haldussõlm",
@@ -1758,6 +1759,8 @@
       "missingList": "Seanside loend puudub",
       "noSessionsFound": "Seansside ei leitud",
       "cantGetSessions": "Seansside toomine ID-de järgi ebaõnnestus",
+      "allDateNotAllowedSpiview": "Kuupäevavahemik 'Kõik' pole spiview päringu jaoks lubatud",
+      "spiviewFetchError": "Viga spiview andmete toomisel",
       "badFieldParam": "Vigane 'field' parameeter",
       "missingExpParam": "exp parameeter puudub",
       "sessionNotFound": "Seanssi ei leitud",

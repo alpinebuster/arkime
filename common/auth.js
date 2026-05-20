@@ -1,5 +1,5 @@
 /******************************************************************************/
-/* auth.js  -- common Auth apis
+/* auth.js  -- common Auth APIs
  *
  * Copyright Yahoo Inc.
  *
@@ -34,6 +34,7 @@ class Auth {
   static #basePath;
   static #requiredAuthHeader;
   static #requiredAuthHeaderVal;
+  static #requiredAuthHeaderHmacs;
   static #userAutoCreateTmpl;
   static #userAutoCreateFuncs;
   static #userAuthIps;
@@ -144,9 +145,10 @@ class Auth {
     }
     Auth.#requiredAuthHeader = options.requiredAuthHeader;
     Auth.#requiredAuthHeaderVal = options.requiredAuthHeaderVal?.split(',').map(s => s.trim()).filter(s => s !== '');
+    Auth.#requiredAuthHeaderHmacs = Auth.#requiredAuthHeaderVal?.map(v => crypto.createHmac('sha256', 'compare').update(v).digest());
     Auth.#userAutoCreateTmpl = options.userAutoCreateTmpl;
     if (Auth.#userAutoCreateTmpl) {
-      console.log('WARNING - userAutoCreateTmpl is deprecated, use [user-auto-create] section instead');
+      console.log('WARNING - userAutoCreateTmpl is deprecated and INSECURE, use [user-auto-create] section instead. This functionality will be removed in Arkime 7.');
     }
 
     const userAutoCreate = ArkimeConfig.getSection('user-auto-create');
@@ -200,7 +202,7 @@ class Auth {
           process.exit(1);
         }
       }
-    } else if (Auth.mode === 'header') {
+    } else if (Auth.mode.startsWith('header')) {
       Auth.#userAuthIps.add('::ffff:127.0.0.0', 96 + 8, 1);
       Auth.#userAuthIps.add('::1', 128, 1);
     } else {
@@ -209,8 +211,8 @@ class Auth {
 
     function check (field, str) {
       if (!ArkimeUtil.isString(Auth.#authConfig[field])) {
-        console.log(`ERROR - ${str} missing from config file`);
-        process.exit();
+        console.log(`ERROR - ${str ?? field} missing from config file`);
+        process.exit(1);
       }
     }
 
@@ -259,6 +261,10 @@ class Auth {
     case 'header+basic':
       Auth.#strategies = ['header', 'basic'];
       break;
+    case 'header-jwt':
+      check('userIdField', 'authUserIdField');
+      Auth.#strategies = ['header'];
+      break;
     case 's2s':
       Auth.#strategies = ['s2s'];
       break;
@@ -293,7 +299,7 @@ class Auth {
         name: 'ARKIME-SID',
         secret: Auth.passwordSecret + Auth.#serverSecret,
         resave: false,
-        saveUninitialized: true,
+        saveUninitialized: false,
         cookie: { path: Auth.#basePath, secure: Auth.#authConfig.cookieSecure, sameSite: Auth.#authConfig.cookieSameSite ?? 'Lax', maxAge: 24 * 60 * 60 * 1000, httpOnly: true },
         store: new ESStore({ })
       }));
@@ -308,10 +314,13 @@ class Auth {
           res.sendFile(path.join(__dirname, '../assets/DTA_Logo_Mark_Blue.png'));
         });
 
+        let formHtmlTemplate;
         Auth.#authRouter.get('/auth', (req, res) => {
           // User is not authenticated, show the login form
-          let html = fs.readFileSync(path.join(__dirname, '/vueapp/formAuth.html'), 'utf-8');
-          html = html.toString().replace(/@@BASEHREF@@/g, Auth.#basePath)
+          if (!formHtmlTemplate) {
+            formHtmlTemplate = fs.readFileSync(path.join(__dirname, '/vueapp/formAuth.html'), 'utf-8');
+          }
+          const html = formHtmlTemplate.replace(/@@BASEHREF@@/g, Auth.#basePath)
             .replace(/@@MESSAGE@@/g, ArkimeConfig.get('loginMessage', ''))
             .replace(/@@OGURL@@/g, req.session.ogurl ?? Auth.#basePath);
           return res.send(html);
@@ -378,7 +387,7 @@ class Auth {
       logoutUrl = logoutUrl.replace('ARKIME_ID_TOKEN', req.session.id_token);
     }
     if (ArkimeConfig.debug > 0) {
-      console.log('Set logoutUrl to', req.user.userId, '=>', Auth.#logoutUrl);
+      console.log('Set logoutUrl to', req.user.userId, '=>', logoutUrl);
     }
     return logoutUrl;
   }
@@ -536,20 +545,52 @@ class Auth {
         return done(null, false);
       }
 
-      if (Auth.#requiredAuthHeader !== undefined && Auth.#requiredAuthHeaderVal !== undefined) {
+      if (Auth.#requiredAuthHeader !== undefined && Auth.#requiredAuthHeaderHmacs !== undefined) {
         const authHeader = req.headers[Auth.#requiredAuthHeader];
         if (authHeader === undefined) {
           return done('Missing authorization header');
         }
-        const authorized = authHeader.split(',').some(headerVal => Auth.#requiredAuthHeaderVal.includes(headerVal.trim()));
+        const authorized = authHeader.split(',').some(headerVal => {
+          const h = crypto.createHmac('sha256', 'compare').update(headerVal.trim()).digest();
+          return Auth.#requiredAuthHeaderHmacs.some(expected => crypto.timingSafeEqual(expected, h));
+        });
         if (!authorized) {
-          console.log(`The required auth header '${Auth.#requiredAuthHeader}' expected '${Auth.#requiredAuthHeaderVal}' and has `, ArkimeUtil.sanitizeStr(authHeader));
+          console.log(`The required auth header '${Auth.#requiredAuthHeader}' did not match an expected value, got `, ArkimeUtil.sanitizeStr(authHeader));
           return done('Bad authorization header');
         }
       }
 
-      const userId = req.headers[Auth.#userNameHeader].trim();
-      if (userId === '') {
+      let userId;
+      let vals;
+
+      if (Auth.mode === 'header-jwt') {
+        // No signature verification — the upstream proxy (ALB, Cloudflare Access, etc.)
+        // has already verified the JWT before forwarding the request.
+        try {
+          const jwt = req.headers[Auth.#userNameHeader];
+          const parts = jwt.split('.');
+          if (parts.length !== 3) {
+            return done('Invalid JWT in header');
+          }
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+          userId = payload[Auth.#authConfig.userIdField]?.toString().trim();
+          vals = payload;
+        } catch (e) {
+          console.log('AUTH: Failed to decode JWT from header', Auth.#userNameHeader, e.message);
+          return done('Failed to decode JWT');
+        }
+      } else {
+        // Node decodes HTTP header values as ISO-8859-1 (RFC 7230). Reverse proxies
+        // (Caddy, nginx, oauth2-proxy, ALB OIDC, etc.) typically write UTF-8 bytes
+        // directly into headers, so non-ASCII characters arrive as mojibake. Re-decode
+        // each string header from latin-1 bytes back to UTF-8 so auto-create
+        // expressions, dynamic roles, and downstream consumers see the original UTF-8
+        // string. Pure-ASCII values are unchanged.
+        vals = Auth.#utf8Headers(req.headers);
+        userId = vals[Auth.#userNameHeader].trim();
+      }
+
+      if (!userId || userId === '') {
         return done('User name header is empty');
       }
 
@@ -562,7 +603,7 @@ class Auth {
         if (!user.enabled) { return done('User not enabled'); }
         if (!user.headerAuthEnabled) { return done('User header auth not enabled'); }
 
-        await user.updateDynamicRoles(req.headers);
+        await user.updateDynamicRoles(vals);
         user.setLastUsed();
         return done(null, user);
       }
@@ -571,7 +612,7 @@ class Auth {
         if (Auth.#userAutoCreateTmpl === undefined && Auth.#userAutoCreateFuncs === undefined) {
           return headerAuthCheck(err, user);
         } else if ((err && err.toString().includes('Not Found')) || (!user)) { // Try dynamic creation
-          Auth.#dynamicCreate(userId, req.headers, headerAuthCheck);
+          Auth.#dynamicCreate(userId, vals, headerAuthCheck);
         } else {
           return headerAuthCheck(err, user);
         }
@@ -725,6 +766,12 @@ class Auth {
         return done('Unauthorized based on bad url');
       }
 
+      // Backwards compatible: only enforce method when the signed token includes it
+      if (obj.method !== undefined && obj.method !== req.method.toUpperCase()) {
+        console.log('ERROR - mismatch method object:', obj.method, 'request:', ArkimeUtil.sanitizeStr(req.method));
+        return done('Unauthorized based on bad method');
+      }
+
       if (Math.abs(Date.now() - obj.date) > 120000) { // Request has to be +- 2 minutes
         console.log('ERROR - Denying server to server based on timestamp, are clocks out of sync?', Date.now(), obj.date);
         return done('Unauthorized based on timestamp - check that all Arkime viewer machines have accurate clocks');
@@ -790,6 +837,18 @@ class Auth {
   }
 
   // ----------------------------------------------------------------------------
+  // Re-decode header values from latin-1 (Node's default) back to UTF-8.
+  // Pure-ASCII values are unchanged; UTF-8 bytes that Node mis-decoded as latin-1
+  // (e.g. "AndrÃ©" -> "André") are restored to the original UTF-8 string.
+  static #utf8Headers (headers) {
+    const out = {};
+    for (const [k, v] of Object.entries(headers)) {
+      out[k] = typeof v === 'string' ? Buffer.from(v, 'latin1').toString('utf8') : v;
+    }
+    return out;
+  }
+
+  // ----------------------------------------------------------------------------
   static #dynamicCreate (userId, vars, cb) {
     if (ArkimeConfig.debug > 0) {
       console.log('AUTH - #dynamicCreate', ArkimeUtil.sanitizeStr(userId));
@@ -846,11 +905,19 @@ class Auth {
       return ArkimeUtil.serverError.call(res, 403, 'Bad path ' + ArkimeUtil.safeStr(req.path));
     }
 
-    if (!req.query) { return next(); }
+    if (req.query) {
+      for (const key in req.query) {
+        if (ArkimeUtil.isPP(req.query[key])) {
+          return ArkimeUtil.serverError.call(res, 403, 'Invalid value for ' + ArkimeUtil.safeStr(key));
+        }
+      }
+    }
 
-    for (const key in req.query) {
-      if (ArkimeUtil.isPP(req.query[key])) {
-        return ArkimeUtil.serverError.call(res, 403, 'Invalid value for ' + ArkimeUtil.safeStr(key));
+    if (req.body) {
+      for (const key in req.body) {
+        if (ArkimeUtil.isPP(req.body[key])) {
+          return ArkimeUtil.serverError.call(res, 403, 'Invalid value for ' + ArkimeUtil.safeStr(key));
+        }
       }
     }
 
@@ -919,6 +986,9 @@ class Auth {
           }
           return res.redirect(Auth.#basePath);
         } else if (req._parsedUrl.pathname === '/auth/logout/callback') {
+          if (ArkimeConfig.debug > 0) {
+            console.log('AUTH - logout callback from', req.user?.userId, req.ip);
+          }
         }
         return next();
       }
@@ -1054,22 +1124,7 @@ class Auth {
   // Encrypt an object into an auth string
   // IV.E.H
   static obj2auth (obj, secret) {
-    // HACK: Remove in future, for cookies use Next since local
-    if (obj.pid !== undefined) { return Auth.obj2authNext(obj, secret); }
-
-    if (secret) {
-      secret = crypto.createHash('sha256').update(secret).digest();
-    } else {
-      secret = Auth.#serverSecret256;
-    }
-
-    const iv = crypto.randomBytes(16);
-    const c = crypto.createCipheriv('aes-256-cbc', secret, iv);
-    let e = c.update(JSON.stringify(obj), 'utf8', 'hex');
-    e += c.final('hex');
-    e = iv.toString('hex') + '.' + e;
-    const h = crypto.createHmac('sha256', secret).update(e).digest('hex');
-    return e + '.' + h;
+    return Auth.obj2authNext(obj, secret);
   }
 
   // ----------------------------------------------------------------------------
@@ -1078,6 +1133,15 @@ class Auth {
     secret ??= Auth.#serverSecret;
     try {
       const { iv, salt, data, tag } = JSON.parse(auth);
+
+      // Validate strict shapes BEFORE expensive PBKDF2 (DoS protection)
+      const isHex = /^[0-9a-fA-F]+$/;
+      if (typeof iv !== 'string' || iv.length !== 24 || !isHex.test(iv) ||
+          typeof salt !== 'string' || salt.length !== 32 || !isHex.test(salt) ||
+          typeof tag !== 'string' || tag.length !== 32 || !isHex.test(tag) ||
+          typeof data !== 'string' || data.length === 0 || data.length > 8192 || !isHex.test(data)) {
+        throw new Error('Malformed auth token');
+      }
 
       let key = Auth.#keyCache.get(`${secret}:${salt}`);
       if (!key) {
@@ -1147,7 +1211,8 @@ class Auth {
       date: Date.now(),
       user: user.userId,
       node,
-      path
+      path,
+      method: (options.method ?? 'GET').toUpperCase()
     }, secret);
   }
 
@@ -1221,7 +1286,7 @@ class ESStore extends expressSession.Store {
       });
     } catch (err) {
       // If already exists ignore error
-      if (err.meta.body?.error?.type !== 'resource_already_exists_exception') {
+      if (err.meta?.body?.error?.type !== 'resource_already_exists_exception') {
         console.log(err);
         process.exit(1);
       }

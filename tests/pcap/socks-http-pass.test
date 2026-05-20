@@ -123,7 +123,7 @@
    },
    "header" : {
     "index" : {
-     "_index" : "tests_sessions3-131203"
+     "_index" : "tests_sessions3-13m12"
     }
    }
   },
@@ -239,9 +239,10 @@
     ],
     "srcTTLCnt" : 1,
     "tags" : [
+     "socks:auth-failed",
      "socks:password"
     ],
-    "tagsCnt" : 1,
+    "tagsCnt" : 2,
     "tcpflags" : {
      "ack" : 6,
      "ae" : 0,
@@ -264,7 +265,7 @@
    },
    "header" : {
     "index" : {
-     "_index" : "tests_sessions3-131203"
+     "_index" : "tests_sessions3-13m12"
     }
    }
   },
@@ -524,7 +525,7 @@
    },
    "header" : {
     "index" : {
-     "_index" : "tests_sessions3-131203"
+     "_index" : "tests_sessions3-13m12"
     }
    }
   }

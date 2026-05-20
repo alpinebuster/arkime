@@ -38,6 +38,12 @@
       "2"
      ],
      "funcCnt" : 3,
+     "funcName" : [
+      "Read",
+      "Response",
+      "Write"
+     ],
+     "funcNameCnt" : 3,
      "src" : [
       "1",
       "2"
@@ -159,7 +165,7 @@
    },
    "header" : {
     "index" : {
-     "_index" : "tests_sessions3-260204"
+     "_index" : "tests_sessions3-26m02"
     }
    }
   },
@@ -191,6 +197,12 @@
       "13"
      ],
      "funcCnt" : 3,
+     "funcName" : [
+      "ColdRestart",
+      "Read",
+      "Response"
+     ],
+     "funcNameCnt" : 3,
      "src" : [
       "10",
       "20"
@@ -269,7 +281,7 @@
    },
    "header" : {
     "index" : {
-     "_index" : "tests_sessions3-260204"
+     "_index" : "tests_sessions3-26m02"
     }
    }
   }

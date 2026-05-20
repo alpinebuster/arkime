@@ -218,6 +218,25 @@ LOCAL void dcerpc_process_pdu(ArkimeSession_t *session, const uint8_t *data, int
         dcerpc_parse_request(session, &bsb, le);
         break;
     }
+
+    // Auth trailer (sec_trailer): present when auth_length > 0 in header.
+    // Located at offset (fragLen - 8 - authLen). The 8-byte sec_trailer
+    // header is followed by authLen bytes of auth data (e.g. NTLMSSP).
+    uint16_t authLen;
+    if (le) {
+        authLen = data[10] | (data[11] << 8);
+    } else {
+        authLen = (data[10] << 8) | data[11];
+    }
+    if (authLen > 0 && len >= 16 + 8 + authLen) {
+        uint32_t trailerOff = len - authLen - 8;
+        uint8_t authType = data[trailerOff];
+        if (authType == 10 /* NTLMSSP */ &&
+            authLen >= 8 &&
+            memcmp(data + trailerOff + 8, "NTLMSSP\0", 8) == 0) {
+            arkime_parsers_ntlm_decode(session, data + trailerOff + 8, authLen);
+        }
+    }
 }
 
 /******************************************************************************/
@@ -226,7 +245,7 @@ LOCAL int dcerpc_parser(ArkimeSession_t *session, void *uw, const uint8_t *data,
     ArkimeParserBuf_t *pb = uw;
 
     if (arkime_parser_buf_add(pb, which, data, remaining) < 0)
-        return 0;
+        return ARKIME_PARSER_UNREGISTER;
 
     while (pb->len[which] >= 16) {
         // Check byte order from data representation (byte 4, bit 4: 0=BE, 1=LE)
@@ -240,9 +259,13 @@ LOCAL int dcerpc_parser(ArkimeSession_t *session, void *uw, const uint8_t *data,
             fragLen = (pb->buf[which][8] << 8) | pb->buf[which][9];
         }
 
-        if (fragLen < 16 || fragLen > 8192) {
-            arkime_parser_buf_skip(pb, which, pb->len[which]);
-            return 0;
+        if (fragLen < 16) {
+            arkime_session_add_tag(session, "dcerpc:bad-fraglen");
+            return ARKIME_PARSER_UNREGISTER;
+        }
+        if (fragLen > pb->bufMax) {
+            arkime_session_add_tag(session, "dcerpc:fragment-too-long");
+            return ARKIME_PARSER_UNREGISTER;
         }
 
         if (pb->len[which] < fragLen)

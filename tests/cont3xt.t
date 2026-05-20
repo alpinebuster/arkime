@@ -1,5 +1,5 @@
 # Test cont3xt.js
-use Test::More tests => 217;
+use Test::More tests => 218;
 use Test::Differences;
 use Data::Dumper;
 use ArkimeTest;
@@ -600,6 +600,25 @@ $json = cont3xtPutToken("/api/overview", to_json({
 }), $token);
 eq_or_diff($json, from_json('{"success": false, "text": "editRoles must be an array of strings"}'));
 
+# deeply nested custom field should be rejected to prevent stack overflow DoS
+my $deep = { field => "leaf", type => "string" };
+for (my $i = 0; $i < 100; $i++) {
+  $deep = { type => "table", fields => [$deep] };
+}
+$json = cont3xtPutToken("/api/overview", to_json({
+    name => "DeepOverview",
+    title => "Deep",
+    iType => "domain",
+    viewRoles => ["cont3xtUser"],
+    editRoles => ["superAdmin"],
+    fields => [{
+        type => "custom",
+        from => "Foo",
+        custom => $deep
+    }]
+}), $token);
+eq_or_diff($json, from_json('{"success": false, "text": "Custom field nested too deep"}'));
+
 # update overview requires token
 $json = cont3xtPut('/api/overview', to_json({
     name => "Overview1",
@@ -887,7 +906,7 @@ is($json->{data}->{country}->{country}->{names}->{en}, "United States");
 $json = cont3xtPost('/api/integration/ip/elasticsearch:test/search', to_json({
   query => "10.0.0.1"
 }));
-is($json->{data}->{_cont3xt}->{count}, 2);
+is($json->{data}->{_cont3xt}->{count}, 11);
 is($json->{data}->{hits}->[0]->{source}->{ip}, "10.0.0.1");
 is($json->{data}->{hits}->[1]->{source}->{ip}, "10.0.0.1");
 
