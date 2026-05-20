@@ -671,7 +671,8 @@ if [ $DOCLEAN -eq 1 ]; then
     $MAKE clean
 fi
 
-$MAKE -j4
+CPUS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+$MAKE -j$((CPUS - 1))
 if [ $? -ne 0 ]; then
   echo "ARKIME: $MAKE failed"
   exit 1

@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "arkimeconfig.h": "c",
+        "python.h": "c"
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc"
+}

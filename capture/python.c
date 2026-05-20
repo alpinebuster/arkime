@@ -40,6 +40,7 @@ LOCAL GPtrArray *filesLoaded;
 /******************************************************************************/
 typedef struct {
     int dummy;
+    PyObject *cached_modules;
 } ArkimeState;
 
 extern __thread int arkimePacketThread;
@@ -47,27 +48,57 @@ LOCAL __thread int arkimeReaderThread = -1;
 LOCAL int loadingThread = -1;
 
 /******************************************************************************/
-static PyObject *global_torch = NULL;
+static PyObject *arkime_get_module(PyObject *self, PyObject *args) {
+    const char *module_name;
 
-static PyObject *arkime_get_torch_module(PyObject *self, PyObject *args) {
-    if (!global_torch) {
-        PyErr_SetString(PyExc_RuntimeError, "Torch module not initialized");
+    if (!PyArg_ParseTuple(args, "s", &module_name)) {
         return NULL;
     }
-    Py_INCREF(global_torch);
-    return global_torch;
-}
 
-void arkime_python_init_torch() {
-    PyGILState_STATE gstate = PyGILState_Ensure();
-
-    global_torch = PyImport_ImportModule("torch");
-    if (!global_torch) {
-        PyErr_Print();
-        LOGEXIT("Failed to import torch");
+    ArkimeState *state = (ArkimeState *)PyModule_GetState(self);
+    if (state == NULL || state->cached_modules == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Arkime module state not initialized");
+        return NULL;
     }
 
-    PyGILState_Release(gstate);
+    PyObject *module = PyDict_GetItemString(state->cached_modules, module_name);
+    if (module != NULL) {
+        Py_INCREF(module);
+        return module;
+    }
+
+    module = PyImport_ImportModule(module_name);
+    if (module == NULL) {
+        LOGEXIT("Failed to import torch");
+        return NULL;
+    }
+
+    if (PyDict_SetItemString(state->cached_modules, module_name, module) < 0) {
+        Py_DECREF(module);
+        return NULL;
+    }
+
+    return module;
+}
+
+static int arkime_module_traverse(PyObject *m, visitproc visit, void *arg) {
+    ArkimeState *state = (ArkimeState *)PyModule_GetState(m);
+    if (state != NULL) {
+        Py_VISIT(state->cached_modules);
+    }
+    return 0;
+}
+
+static int arkime_module_clear(PyObject *m) {
+    ArkimeState *state = (ArkimeState *)PyModule_GetState(m);
+    if (state != NULL) {
+        Py_CLEAR(state->cached_modules);
+    }
+    return 0;
+}
+
+static void arkime_module_free(void *m) {
+    arkime_module_clear((PyObject *)m);
 }
 
 /******************************************************************************/
@@ -538,7 +569,7 @@ LOCAL PyMethodDef arkime_methods[] = {
     { "register_pre_save", arkime_python_register_pre_save, METH_VARARGS, NULL },
     { "field_define", arkime_python_field_define, METH_VARARGS, NULL },
     { "field_get", arkime_python_field_get, METH_VARARGS, NULL },
-    { "get_torch_module", arkime_get_torch_module, METH_NOARGS, "Get torch module from C" },
+    { "get_module", arkime_get_module, METH_VARARGS, "Get a Python module by name (e.g., 'torch', 'numpy')" },
     {NULL, NULL, 0, NULL}
 };
 
@@ -549,9 +580,9 @@ LOCAL struct PyModuleDef arkime_module = {
     sizeof(ArkimeState),
     arkime_methods,
     NULL,     // m_slots
-    NULL,     // m_traverse
-    NULL,     // m_clear
-    NULL      // m_free
+    arkime_module_traverse, // m_traverse (Support GC)
+    arkime_module_clear,    // m_clear
+    arkime_module_free      // m_free
 };
 
 // Function to initialize our arkime C module
@@ -569,6 +600,12 @@ PyMODINIT_FUNC PyInit_arkime(void)
         return NULL;
     }
     state->dummy = 0;
+    // Initialize the module cache dictionary of the current interpreter
+    state->cached_modules = PyDict_New();
+    if (state->cached_modules == NULL) {
+        Py_DECREF(m);
+        return NULL;
+    }
 
     return m;
 }
